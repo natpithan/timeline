@@ -123,6 +123,10 @@
     font-size:13px; color:var(--text-soft); border:1px solid var(--line);
     transition:background .15s ease, border-color .15s ease, color .15s ease;
   }
+  .side-adv{ display:flex; flex-direction:column; gap:8px; }
+  .side-adv > summary{ cursor:pointer; font-size:12.5px; color:var(--text-soft); padding:6px 4px; list-style:none; }
+  .side-adv > summary::-webkit-details-marker{ display:none; }
+  .side-adv[open] > summary{ margin-bottom:2px; }
   .side-btn:hover{ background:var(--ink-2); border-color:var(--line-strong); color:var(--text); }
   .backup-folder-block{ display:none; flex-direction:column; gap:6px; }
   .file-status .clear-link{
@@ -154,11 +158,6 @@
   }
   .iconbtn:hover{ background:var(--paper-2); border-color:var(--line-strong); }
   .iconbtn:active{ transform:scale(.94); }
-  .pill{
-    padding:5px 12px; border-radius:999px; font-size:12.5px; font-weight:600;
-  }
-  .pill.open{ background:var(--brass-soft); color:var(--brass); }
-  .pill.completed{ background:var(--ok-soft); color:var(--ok); }
 
   /* Today's goal progress — โชว์เหนือ toolbar ให้เห็นทันทีว่าวันนี้ถึงเป้าหรือยัง */
   .today-goals{ margin-bottom:22px; }
@@ -284,7 +283,7 @@
   .month-group{ margin-bottom:26px; }
   .month-title{ font-size:14px; font-weight:700; color:var(--text-soft); margin-bottom:8px; letter-spacing:.2px; }
   .hist-row{
-    display:grid; grid-template-columns:150px 1fr auto auto; gap:12px; align-items:center;
+    display:grid; grid-template-columns:150px 1fr auto; gap:12px; align-items:center;
     padding:11px 16px; border-bottom:1px solid var(--line); cursor:pointer; background:var(--card);
   }
   .hist-row:first-of-type{ border-radius:var(--radius-lg) var(--radius-lg) 0 0; }
@@ -317,6 +316,7 @@
   .stat-hero .mini .mini-lbl{ font-size:12px; color:var(--text-soft); margin-top:3px; }
 
   .stat-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:18px; }
+  .stat-grid-3{ grid-template-columns:repeat(3,minmax(0,1fr)); }
   .stat-card{ background:var(--card); border:1px solid var(--line); border-radius:var(--radius-lg); padding:16px 18px; transition:border-color .15s ease, transform .15s ease; }
   .stat-card:hover{ border-color:rgba(214,174,94,.4); transform:translateY(-1px); }
   .stat-card .num{ font-family:var(--serif); font-size:22px; font-weight:600; color:var(--text); font-variant-numeric:tabular-nums; }
@@ -358,6 +358,20 @@
   .rank-1 .streak-num{ color:var(--brass); }
   .streak-num-row{ display:flex; align-items:flex-end; gap:18px; }
   .streak-num-block.secondary{ opacity:.7; }
+  .streak-main{ display:flex; align-items:center; gap:8px; }
+  .streak-unit{ font-size:13px; font-weight:400; color:var(--text-soft); }
+  .flame-wrap{ position:relative; display:inline-flex; flex:none; }
+  .flame{ width:28px; height:28px; overflow:visible; transform:scale(var(--fs,1)); transform-origin:50% 100%; filter:drop-shadow(0 0 var(--g,0px) var(--f1)); }
+  .flame .flame-body{ transform-box:fill-box; transform-origin:50% 100%; animation:flameFlick 2.4s ease-in-out infinite; }
+  .flame-wrap.dim .flame{ filter:saturate(.2) brightness(.7); }
+  .flame-wrap.dim .flame-body{ animation:none; }
+  .flame-next{ font-size:11px; color:var(--text-soft); margin-top:4px; }
+  .flame-wrap.flame-up .flame{ animation:flameUp .9s cubic-bezier(.2,.8,.3,1.3); }
+  .flame-wrap.flame-up::after{ content:''; position:absolute; inset:-3px; border-radius:50%; border:2px solid var(--f1); opacity:0; pointer-events:none; animation:ringPulse .9s ease-out; }
+  @keyframes flameFlick{ 0%,100%{ transform:scale(1,1) rotate(0); } 35%{ transform:scale(.97,1.06) rotate(-1.4deg); } 65%{ transform:scale(1.03,.98) rotate(1.1deg); } }
+  @keyframes flameUp{ 0%{ transform:scale(.4); opacity:.2; } 60%{ transform:scale(1.35); opacity:1; } 100%{ transform:scale(var(--fs,1)); } }
+  @media (prefers-reduced-motion: reduce){ .flame .flame-body, .flame-wrap.flame-up .flame, .flame-wrap.flame-up::after{ animation:none !important; } }
+  @media (max-width:720px){ .flame{ width:24px; height:24px; } }
   .streak-num-sm{ font-family:var(--serif); font-size:17px; font-weight:600; color:var(--text-soft); line-height:1; }
   .streak-lbl{ font-size:11.5px; color:var(--text-soft); margin-top:6px; }
   .streak-sub{ font-size:11.5px; color:var(--text-soft); margin-top:9px; padding-top:9px; border-top:1px solid var(--line); }
@@ -390,14 +404,6 @@
   .trend-legend-delta.flat{ color:var(--text-soft); }
   .trend-compare-note{ font-size:12px; color:var(--text-soft); margin-top:10px; }
 
-  /* Hour-of-day heatmap */
-  .heatmap{ display:flex; flex-direction:column; gap:3px; overflow-x:auto; }
-  .heatmap-row{ display:grid; grid-template-columns:150px repeat(24,1fr); align-items:center; gap:2px; }
-  .heatmap-row-label{ font-size:12.5px; color:var(--text-soft); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-right:8px; }
-  .heatmap-cell{ aspect-ratio:1/1; min-width:9px; border-radius:2px; background:var(--paper-2); transition:transform .1s ease; }
-  .heatmap-cell:hover{ transform:scale(1.25); }
-  .heatmap-hours{ display:grid; grid-template-columns:150px repeat(24,1fr); gap:2px; margin-top:6px; }
-  .heatmap-hours span{ font-size:10px; color:var(--text-soft); text-align:center; }
 
   /* Yearly contribution graph — 53 สัปดาห์ x 7 วัน สีเดียว (accent) 5 ระดับ */
   .yearnav{ display:flex; align-items:center; gap:4px; }
@@ -446,6 +452,9 @@
     display:flex; align-items:center; padding:9px 11px; border:1px solid var(--line); border-radius:var(--radius);
     font-size:14px; color:var(--text-soft); background:var(--paper-2);
   }
+  .goal-dpw{ margin-top:8px; display:flex; align-items:center; gap:10px; }
+  .goal-dpw label{ font-size:12.5px; color:var(--text-soft); margin:0; white-space:nowrap; }
+  .goal-dpw select{ flex:1; }
   .goal-field + .goal-field{ margin-top:14px; padding-top:14px; border-top:1px solid var(--line); }
   .field input::placeholder, .field textarea::placeholder{ color:#868B92; }
   .field textarea{ resize:vertical; min-height:56px; }
@@ -465,6 +474,12 @@
   .detail-suggest-item + .detail-suggest-item{ border-top:1px solid var(--line); }
   .detail-suggest-label{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .detail-suggest-count{ font-size:11.5px; color:var(--text-soft); flex:0 0 auto; white-space:nowrap; }
+  .detail-suggest-del{
+    all:unset; box-sizing:border-box; cursor:pointer; flex:0 0 auto; width:22px; height:22px; border-radius:6px;
+    display:flex; align-items:center; justify-content:center; color:var(--text-soft); font-size:12px; line-height:1;
+    transition:background .12s ease, color .12s ease;
+  }
+  .detail-suggest-del:hover, .detail-suggest-del:focus-visible{ background:var(--danger-soft); color:var(--danger); }
   .timepick{ display:flex; align-items:center; gap:6px; }
   .timepick select{ width:64px; flex:0 0 auto; text-align:center; font-variant-numeric:tabular-nums; }
   .timepick .colon{ font-weight:700; color:var(--text-soft); }
@@ -514,13 +529,9 @@
     .main{ padding:20px 20px 100px; }
     .stat-hero{ flex-direction:column; align-items:flex-start; padding:20px; }
     .stat-hero .hero-side{ gap:20px; }
-    .stat-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .stat-grid, .stat-grid-3{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .stat-grid-3 .stat-card:last-child{ grid-column:1/-1; }
     .streak-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); }
-    .heatmap-scroll{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
-    .heatmap{ overflow-x:visible; }
-    .heatmap, .heatmap-hours{ min-width:470px; }
-    .heatmap-row, .heatmap-hours{ grid-template-columns:78px repeat(24,minmax(14px,1fr)); }
-    .heatmap-row-label{ font-size:11px; }
     .entry{ grid-template-columns:90px 1fr; }
     .entry .actions{ grid-column:1/-1; justify-content:flex-end; }
     .sidebar::after{ display:none; }
@@ -594,7 +605,7 @@
   <div class="startup-box">
     <h1>Daily Timeline Manager</h1>
     <p>
-      บันทึกไทม์ไลน์ชีวิตประจำวันของคุณ เก็บเป็นไฟล์จริงบนเครื่อง ไม่ใช้คลาวด์<br>
+      บันทึกไทม์ไลน์ชีวิตประจำวันของคุณ เก็บเป็นไฟล์จริงบนเครื่อง และซิงค์ข้ามเครื่องผ่าน GitHub ได้ (ไม่บังคับ)<br>
       เลือกเปิดไฟล์ข้อมูลเดิม หรือสร้างไฟล์ใหม่เพื่อเริ่มต้น
     </p>
     <div class="startup-actions" id="startupActionsFS">
@@ -616,7 +627,7 @@
 <div class="scrim" id="scrim"></div>
 
 <div class="sidebar" id="sidebar" style="display:none;">
-  <div class="brand">Daily Timeline<small>Manager — เก็บไฟล์ในเครื่อง</small></div>
+  <div class="brand">Daily Timeline<small>Manager — ไฟล์ในเครื่อง ซิงค์ GitHub ได้</small></div>
   <div class="nav">
     <button data-view="today" class="active"><span class="dot"></span> วันนี้ / Timeline</button>
     <button data-view="history"><span class="dot"></span> ประวัติย้อนหลัง</button>
@@ -636,12 +647,13 @@
       <button class="side-btn" id="btnSetBackupFolder" style="display:none;">🗄 ตั้งโฟลเดอร์สำรองอัตโนมัติ</button>
       <button class="side-btn" id="btnReconnectBackupFolder" style="display:none;">🔌 เชื่อมต่อโฟลเดอร์สำรองอีกครั้ง</button>
     </div>
-    <button class="side-btn" id="btnExport">⤓ Export JSON (สำเนา)</button>
-    <button class="side-btn" id="btnExportCsv">📊 Export CSV</button>
-    <button class="side-btn" id="btnBackupDb">🗂 สำรองไฟล์ข้อมูล</button>
-    <button class="side-btn" id="btnImport">⤴ Import JSON</button>
-    <button class="side-btn" id="btnSwitchFile">🔁 เปลี่ยน/เปิดไฟล์อื่น</button>
+    <button class="side-btn" id="btnExport">⤓ สำรอง / Export JSON</button>
     <button class="side-btn" id="btnRecoverBackup" title="ใช้เมื่อบันทึกลงไฟล์ล้มเหลว หรือข้อมูลปัจจุบันดูไม่ตรง">🛟 กู้คืนจาก Backup ในเบราว์เซอร์</button>
+    <details class="side-adv"><summary>⚙ ขั้นสูง</summary>
+      <button class="side-btn" id="btnExportCsv">📊 Export CSV</button>
+      <button class="side-btn" id="btnImport">⤴ Import JSON</button>
+      <button class="side-btn" id="btnSwitchFile">🔁 เปลี่ยน/เปิดไฟล์อื่น</button>
+    </details>
   </div>
 </div>
 
@@ -660,7 +672,6 @@
       <button class="iconbtn" id="btnNextDay" aria-label="วันถัดไป">›</button>
       <button class="btn ghost small" id="btnToday">วันนี้</button>
       <span class="weekday" id="weekdayLabel"></span>
-      <span class="pill open" id="dayStatusPill">ยังไม่มีข้อมูล</span>
     </div>
 
     <div class="ledger" id="ledger"></div>
@@ -676,7 +687,6 @@
         <button class="btn ghost small" id="btnStopTimer">⏹ หยุด</button>
       </span>
       <button class="btn ghost" id="btnCopyYesterday">⧉ คัดลอกจากเมื่อวาน</button>
-      <button class="btn ghost" id="btnCloseDay">✓ จบ Timeline วันนี้</button>
       <button class="btn danger" id="btnDeleteDay">🗑 ลบทั้งวันนี้</button>
     </div>
 
@@ -704,7 +714,7 @@
     <div class="subtitle">ภาพรวมทั้งหมดจากข้อมูลที่บันทึกไว้</div>
 
     <div class="stat-hero" id="statHero"></div>
-    <div class="stat-grid" id="statGrid"></div>
+    <div class="stat-grid stat-grid-3" id="statGrid"></div>
 
     <div class="stat-section">
       <div class="stat-section-head">
@@ -740,14 +750,6 @@
       </div>
       <div id="trendLegend" style="margin-top:12px;"></div>
       <div class="trend-compare-note" id="trendCompareNote"></div>
-    </div>
-
-    <div class="stat-section">
-      <div class="stat-section-title" id="heatmapTitle">ช่วงเวลาที่มักทำกิจกรรม แยกตามหมวดหมู่</div>
-      <div class="heatmap-scroll">
-        <div class="heatmap" id="heatmap"></div>
-        <div class="heatmap-hours" id="heatmapHours"></div>
-      </div>
     </div>
 
     <div class="stat-section">
@@ -1033,7 +1035,8 @@ function migrateData(data){
     const g = data.goals[k];
     const ok = g && typeof g==='object' && typeof g.target==='number' && g.target>0 &&
       (g.unit==='minutes' || (g.unit==='pages' && k==='reading'));
-    if(!ok) delete data.goals[k];
+    if(!ok){ delete data.goals[k]; return; }
+    if(g.daysPerWeek!==undefined){ const n = Math.round(g.daysPerWeek); if(n>=1 && n<7) g.daysPerWeek = n; else delete g.daysPerWeek; }  // ไม่มี field = 7 วัน/สัปดาห์
   });
   return data;
 }
@@ -1899,7 +1902,7 @@ document.querySelectorAll('.nav button').forEach(btn=>{
    ============================================================ */
 /* "วันนี้" ตามปฏิทิน (todayStr) ขัดกับแนวคิด Timeline Day ของแอปเอง — ถ้ายังไม่นอน (ตี 1 ยังไม่เข้านอน)
    ปฏิทินข้ามไปวันใหม่แล้ว แต่ผู้ใช้ยังถือว่าเป็น Timeline Day เดิม จึงเดาว่า "วันนี้" ที่ควรเปิดให้ควร
-   เป็นเมื่อวาน ถ้า: ก) ตอนนี้ยังก่อน ~06:00, ข) วันของเมื่อวานยัง open (ยังไม่จบ), และ ค) ยังไม่มี
+   เป็นเมื่อวาน ถ้า: ก) ตอนนี้ยังก่อน ~06:00, ข) เมื่อวานมีข้อมูลอยู่, และ ค) ยังไม่มี
    milestone "ตื่น" ของวันปฏิทินวันนี้ (ถ้ามีแล้วแปลว่าเริ่ม Timeline Day ใหม่จริง ๆ) */
 function effectiveTodayStr(){
   const now = new Date();
@@ -1908,7 +1911,7 @@ function effectiveTodayStr(){
     const y = addDaysToDateStr(calToday, -1);
     const info = appData.days[y];
     const hasWakeToday = appData.activities.some(a=>a.timelineDay===calToday && a.isMilestone && a.category==='wake');
-    if(info && info.status!=='completed' && !hasWakeToday){
+    if(info && !hasWakeToday){
       return y;
     }
   }
@@ -1957,19 +1960,7 @@ function renderToday(){
   renderTodayStreak();
   renderQuickChips();
   document.getElementById('weekdayLabel').textContent = weekdayLabel(currentDay);
-  const dayInfo = appData.days[currentDay];
-  const pill = document.getElementById('dayStatusPill');
-  if(!dayInfo){
-    pill.textContent = 'ยังไม่มีข้อมูล';
-    pill.className = 'pill open';
-  } else if(dayInfo.status==='completed'){
-    pill.textContent = 'จบวันแล้ว';
-    pill.className = 'pill completed';
-  } else {
-    pill.textContent = 'กำลังดำเนินอยู่';
-    pill.className = 'pill open';
-  }
-  document.getElementById('btnCloseDay').textContent = (dayInfo && dayInfo.status==='completed') ? '↺ เปิด Timeline วันนี้อีกครั้ง' : '✓ จบ Timeline วันนี้';
+
 
   const list = getActivitiesForDay(currentDay);
   const ledger = document.getElementById('ledger');
@@ -2043,15 +2034,16 @@ function renderTodayStreak(){
   const box = document.getElementById('todayStreak');
   try{
     const cats = CATEGORY_ORDER.filter(c=>c!=='wake' && c!=='sleep' && c!=='milestone_other');
-    const cur = st => st.goalStreak ? st.goalStreak.current : st.logStreak.current;
+    const sk = st => st.goalStreak || st.logStreak;
+    const cur = st => sk(st).current, eq = st => sk(st).equivDays;
     const shown = cats.map(computeCategoryStreak)
       .filter(st=>st.totalCount>=STREAK_MIN_COUNT && cur(st)>0)
-      .sort((a,b)=>cur(b)-cur(a)).slice(0,4);
+      .sort((a,b)=>eq(b)-eq(a)).slice(0,4);
     if(!shown.length){ box.style.display='none'; return; }
     box.innerHTML = '<span>สตรีค</span>' + shown.map(st=>{
       const color = CATEGORY_COLORS[st.category] || '#8B939C';
-      const tip = st.goalStreak ? 'ถึงเป้าติดต่อกัน' : 'มีบันทึกติดต่อกัน';
-      return `<span class="streak-chip" title="${tip}"><span class="cat-dot" style="background:${color}"></span>${CATEGORY_LABEL[st.category]||st.category} <b>${cur(st).toLocaleString('th-TH')}</b> วัน</span>`;
+      const tip = st.goalStreak ? (st.goalStreak.unit==='week' ? 'สัปดาห์ที่ถึงเป้าติดต่อกัน' : 'ถึงเป้าติดต่อกัน') : 'มีบันทึกติดต่อกัน';
+      return `<span class="streak-chip" title="${tip}"><span class="cat-dot" style="background:${color}"></span>${CATEGORY_LABEL[st.category]||st.category} <b>${cur(st).toLocaleString('th-TH')}</b> ${sk(st).unit==='week' ? 'สัปดาห์' : 'วัน'}</span>`;
     }).join('');
     box.style.display = 'flex';
   }catch(e){ box.style.display = 'none'; }
@@ -2202,30 +2194,11 @@ function escapeHtml(s){
   return d.innerHTML;
 }
 
-document.getElementById('btnCloseDay').addEventListener('click', ()=>{
-  const existingInfo = appData.days[currentDay];
-  const isCurrentlyCompleted = existingInfo && existingInfo.status==='completed';
-  if(!isCurrentlyCompleted && getActivitiesForDay(currentDay).length===0){
-    showToast('ต้องมีอย่างน้อย 1 กิจกรรมก่อนจะจบ Timeline วันนี้ได้');
-    return;
-  }
-  const info = ensureDay(currentDay);
-  info.status = isCurrentlyCompleted ? 'open' : 'completed';
-  info.completedAt = info.status==='completed' ? new Date().toISOString() : null;
-  scheduleSave();
-  renderToday();
-  showToast(info.status==='completed' ? 'จบ Timeline วันนี้แล้ว' : 'เปิด Timeline วันนี้อีกครั้ง');
-});
-
 function deleteActivity(id){
   const a = appData.activities.find(x=>x.id===id);
   if(!a) return;
   const day = a.timelineDay;
   const dayInfoSnapshot = appData.days[day] ? Object.assign({}, appData.days[day]) : null;
-  // ถ้านี่คือกิจกรรมสุดท้ายของวันที่ "จบ Timeline" ไปแล้ว การลบจะทำให้ day record (รวมสถานะ completed) ถูกลบทิ้ง
-  // ไปด้วยทันที เหลือแค่ toast undo 5 วิ ถ้ากดไม่ทันจะเสียสถานะ "จบวัน" แบบเงียบๆ จึงขอ confirm เพิ่มเฉพาะเคสนี้
-  const isLastOfCompletedDay = dayInfoSnapshot && dayInfoSnapshot.status==='completed' && getActivitiesForDay(day).length===1;
-  if(isLastOfCompletedDay && !confirm('นี่คือกิจกรรมสุดท้ายของวันที่ "จบ Timeline" แล้ว การลบจะทำให้สถานะ "จบวัน" ของวันนี้หายไปด้วย ต้องการดำเนินการต่อหรือไม่?')) return;
   appData.activities = appData.activities.filter(x=>x.id!==id);
   // ถ้าลบกิจกรรมสุดท้ายของวันนี้ไปแล้ว ให้ลบ day record ทิ้งด้วย ไม่งั้นจะเป็นวันว่างค้างในระบบ
   // ทำให้ streak / "เฉลี่ยต่อวัน" นับวันที่ไม่มีข้อมูลจริงรวมเข้าไปด้วย
@@ -2385,6 +2358,27 @@ document.getElementById('btnCopyYesterday').addEventListener('click', ()=>{
 const fDetailEl = document.getElementById('fDetail');
 const fDetailSuggestEl = document.getElementById('fDetailSuggest');
 
+/* ผู้ใช้กด "ซ่อน" คำแนะนำรายละเอียดทิ้งได้ (เช่น อ่านจบเล่มนี้แล้ว ไม่อยากให้เด้งมาอีก)
+   เก็บเฉพาะในเบราว์เซอร์นี้ (เหมือน dtm_celebrated ของวงแหวน) ไม่แตะ appData/ไฟล์ข้อมูล/ซิงค์
+   เพราะเป็นความชอบเรื่องการแสดงผล ไม่ใช่ตัวกิจกรรมจริง — กิจกรรมที่บันทึกไปแล้วยังอยู่ครบเหมือนเดิม */
+const DISMISSED_DETAILS_KEY = 'dtm_dismissed_details';
+function getDismissedDetails(category){
+  try{
+    const o = JSON.parse(localStorage.getItem(DISMISSED_DETAILS_KEY)||'{}');
+    return (o && Array.isArray(o[category])) ? o[category] : [];
+  }catch(e){ return []; }
+}
+function setDetailDismissed(category, detail, dismissed){
+  let o;
+  try{ o = JSON.parse(localStorage.getItem(DISMISSED_DETAILS_KEY)||'{}'); }catch(e){ o = null; }
+  if(!o || typeof o!=='object') o = {};
+  const list = Array.isArray(o[category]) ? o[category].slice() : [];
+  const i = list.indexOf(detail);
+  if(dismissed){ if(i===-1) list.push(detail); }
+  else if(i!==-1){ list.splice(i,1); }
+  o[category] = list;
+  try{ localStorage.setItem(DISMISSED_DETAILS_KEY, JSON.stringify(o)); }catch(e){}
+}
 function getFrequentDetails(category){
   if(!category) return [];
   const counts = new Map();
@@ -2394,8 +2388,9 @@ function getFrequentDetails(category){
     if(!d) return;
     counts.set(d, (counts.get(d)||0)+1);
   });
+  const dismissed = getDismissedDetails(category);
   return Array.from(counts.entries())
-    .filter(([,count])=>count>=3)
+    .filter(([detail,count])=>count>=3 && !dismissed.includes(detail))
     .sort((a,b)=>b[1]-a[1])
     .map(([detail,count])=>({detail,count}));
 }
@@ -2468,7 +2463,27 @@ function renderDetailSuggestions(){
     const count = document.createElement('span');
     count.className = 'detail-suggest-count';
     count.textContent = `×${x.count}`;
-    item.append(label, count);
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'detail-suggest-del';
+    del.textContent = '✕';
+    del.setAttribute('aria-label', `ไม่ต้องแนะนำ "${x.detail}" อีก`);
+    del.title = 'ไม่ต้องแนะนำอีก';
+    /* stopPropagation กันไม่ให้ mousedown ของปุ่มลบไปโดน handler เลือกรายการของ item (ตัวแม่) เข้าด้วย */
+    del.addEventListener('mousedown', (e)=>{
+      e.preventDefault();
+      e.stopPropagation();
+      const detail = x.detail, category2 = category;
+      setDetailDismissed(category2, detail, true);
+      renderDetailSuggestions();
+      fDetailEl.focus();
+      showToast(`ไม่แนะนำ "${detail}" อีกแล้ว`, 'เลิกทำ', ()=>{
+        setDetailDismissed(category2, detail, false);
+        renderDetailSuggestions();
+        showToast('เลิกทำการซ่อนแล้ว');
+      });
+    });
+    item.append(label, count, del);
     /* ใช้ mousedown + preventDefault แทน click เพื่อเลือกก่อนที่ blur ของ textarea จะทำงาน */
     item.addEventListener('mousedown', (e)=>{
       e.preventDefault();
@@ -2910,11 +2925,9 @@ function renderHistory(){
       // กันพังกรณี key วันที่รูปแบบผิด (เช่นหลุดมาจากไฟล์ import ที่ไม่ผ่าน validate) — WEEKDAYS_TH[NaN] จะ throw
       const parsedDate = /^\d{4}-\d{2}-\d{2}$/.test(d) ? new Date(d+'T00:00:00') : null;
       const wd = parsedDate ? WEEKDAYS_TH[parsedDate.getDay()].replace('วัน','') : '?';
-      const badge = info.status==='completed' ? '<span class="pill completed" style="padding:3px 9px;font-size:11px;">จบแล้ว</span>' : '<span class="pill open" style="padding:3px 9px;font-size:11px;">ยังไม่จบ</span>';
       return `<div class="hist-row" data-day="${escapeHtml(d)}" tabindex="0" role="button" aria-label="ดูรายละเอียดวันที่ ${parseInt(dd,10)} ${MONTHS_TH[mo-1]} ${y+543}">
         <div><div class="d">${parseInt(dd,10)} ${MONTHS_TH[mo-1]} ${y+543}</div><div class="wd">${wd}</div></div>
         <div class="cnt">${acts.length} กิจกรรม</div>
-        <div>${badge}</div>
         <div style="color:var(--text-soft);">›</div>
       </div>`;
     }).join('');
@@ -2944,7 +2957,7 @@ historyCategorySelect.addEventListener('change', renderHistory);
    8. STATS VIEW
    ============================================================ */
 /* หมวดที่ไม่รู้จัก (เช่นหลุดมาจากไฟล์ import ที่มี category แปลกๆ) เดิมถูกนับรวมในยอดรวม (hero) แต่ไม่ขึ้น
-   ในกราฟ breakdown/trend และฮีทแมปจับไปกอง 'other' ซึ่งไม่ตรงกับยอดจริง — normalize ให้เป็น 'other'
+   ในกราฟ breakdown/trend ซึ่งไม่ตรงกับยอดจริง — normalize ให้เป็น 'other'
    ตั้งแต่ต้นทาง (จุดเดียว ใช้ร่วมกันทุกที่ที่รวมยอดตาม category) เพื่อให้ยอดตรงกันทุกที่ */
 function normalizeCategoryKey(cat){
   return CATEGORY_ORDER.includes(cat) ? cat : 'other';
@@ -2952,7 +2965,6 @@ function normalizeCategoryKey(cat){
 
 function renderStats(){
   const totalDays = Object.keys(appData.days).length;
-  const completedDays = Object.values(appData.days).filter(d=>d.status==='completed').length;
   const totalActivities = appData.activities.filter(a=>!a.isMilestone).length;
   const totalPages = appData.activities.reduce((s,a)=>s+(a.isMilestone?0:(a.pages||0)),0);
 
@@ -2963,7 +2975,6 @@ function renderStats(){
     catTotals[key] = (catTotals[key]||0) + a.durationMinutes;
   });
   const totalTrackedMinutes = Object.values(catTotals).reduce((s,v)=>s+v,0);
-  const completedPct = totalDays ? Math.round(completedDays/totalDays*100) : 0;
 
   document.getElementById('statHero').innerHTML = `
     <div class="hero-figure">
@@ -2975,15 +2986,10 @@ function renderStats(){
         <div class="mini-num">${totalDays ? fmtDur(Math.round(totalTrackedMinutes/totalDays)) : '–'}</div>
         <div class="mini-lbl">เฉลี่ยต่อวันที่บันทึก</div>
       </div>
-      <div class="mini">
-        <div class="mini-num">${totalDays ? completedPct+'%' : '–'}</div>
-        <div class="mini-lbl">อัตราวันที่จบ Timeline</div>
-      </div>
     </div>`;
 
   document.getElementById('statGrid').innerHTML = [
     [totalDays,'จำนวนวันที่บันทึก'],
-    [completedDays,'จำนวนวันที่จบ Timeline'],
     [totalActivities,'จำนวนกิจกรรมสำคัญทั้งหมด'],
     [totalPages,'จำนวนหน้าที่อ่านรวม'],
   ].map(([num,lbl])=>`<div class="stat-card"><div class="num">${num.toLocaleString('th-TH')}</div><div class="lbl">${lbl}</div></div>`).join('');
@@ -3008,7 +3014,6 @@ function renderStats(){
   renderStreak();
   renderSleepStats();
   renderTrendChart();
-  renderHeatmap();
   renderYearMap();
 }
 
@@ -3020,6 +3025,7 @@ function openGoalsModal(){
     const goal = appData.goals[cat.value];
     const targetVal = goal ? goal.target : '';
     const unit = (goal && goal.unit) || (cat.value==='reading' ? 'pages' : 'minutes');
+    const dpwVal = (goal && goal.daysPerWeek) || 7;
     const unitControl = cat.value==='reading'
       ? `<select class="goal-unit-select">
           <option value="minutes"${unit==='minutes'?' selected':''}>นาที/วัน</option>
@@ -3031,6 +3037,9 @@ function openGoalsModal(){
       <div class="row2">
         <input type="number" min="0" step="1" class="goal-target-input" placeholder="0 = ไม่ตั้งเป้า" value="${targetVal}">
         ${unitControl}
+      </div>
+      <div class="goal-dpw"><label>วันต่อสัปดาห์</label>
+        <select class="goal-dpw-select">${[1,2,3,4,5,6,7].map(n=>`<option value="${n}"${n===dpwVal?' selected':''}>${n===7?'ทุกวัน (7)':n+' วัน/สัปดาห์'}</option>`).join('')}</select>
       </div>
     </div>`;
   }).join('');
@@ -3049,6 +3058,8 @@ document.getElementById('btnGoalsSave').addEventListener('click', ()=>{
     if(!targetVal || targetVal<=0) return; // 0 หรือว่าง = ไม่ตั้งเป้าหมวดนี้
     const unitSelect = row.querySelector('.goal-unit-select');
     newGoals[cat] = { unit: unitSelect ? unitSelect.value : 'minutes', target: targetVal };
+    const dpw = parseInt(row.querySelector('.goal-dpw-select').value, 10);
+    if(dpw>=1 && dpw<7) newGoals[cat].daysPerWeek = dpw;
   });
   appData.goals = newGoals;
   scheduleSave();
@@ -3157,7 +3168,27 @@ function streakFromDates(dates){
       current++; cursor=ds;
     }
   }
-  return { current, longest: Math.max(longest,current) };
+  return { unit:'day', current, longest: Math.max(longest,current), equivDays: current, pending: current>0 && last!==today };
+}
+
+/* สตรีครายสัปดาห์ (เป้า < 7 วัน/สัปดาห์): สัปดาห์เริ่มวันจันทร์ นับสัปดาห์ติดกันที่มีวันถึงเป้า >= daysPerWeek
+   สัปดาห์ปัจจุบันที่ยังไม่ครบไม่ทำให้สตรีคขาด — ขาดเมื่อสัปดาห์ที่จบไปแล้วไม่ผ่านเท่านั้น */
+const WEEK_START = 1;   // 1 = จันทร์ (ตรงกับกราฟ trend / yearmap)
+function weekStartOf(ds){
+  const [y,m,d] = ds.split('-').map(Number);
+  return addDaysToDateStr(ds, -((new Date(y,m-1,d).getDay()-WEEK_START+7)%7));
+}
+function weeklyStreak(goalDates, need){
+  const hits = {};
+  goalDates.forEach(d=>{ const w = weekStartOf(d); hits[w] = (hits[w]||0)+1; });
+  const ok = w => (hits[w]||0) >= need;
+  const passed = Object.keys(hits).filter(ok).sort();
+  let longest=0, run=0;
+  passed.forEach((w,i)=>{ run = (i>0 && addDaysToDateStr(passed[i-1],7)===w) ? run+1 : 1; if(run>longest) longest=run; });
+  const cw = weekStartOf(effectiveTodayStr());
+  let current = ok(cw) ? 1 : 0, w = addDaysToDateStr(cw,-7);
+  while(ok(w)){ current++; w = addDaysToDateStr(w,-7); }
+  return { unit:'week', current, longest: Math.max(longest,current), thisWeekHits: hits[cw]||0, needed: need, equivDays: current*7, pending: current>0 && !ok(cw) };
 }
 
 /* คำนวณ streak ของ "หมวดหมู่กิจกรรม" หนึ่งตัว (เช่น อ่านหนังสือ, เรียนคอร์ส) แทนการอิงสถานะ "จบ Timeline"
@@ -3179,7 +3210,8 @@ function computeCategoryStreak(category){
       sums[a.timelineDay] = (sums[a.timelineDay]||0) + v;
     });
     const goalDates = Object.entries(sums).filter(([,v])=>v>=goal.target).map(([d])=>d).sort();
-    goalStreak = streakFromDates(goalDates);
+    const dpw = goal.daysPerWeek>=1 && goal.daysPerWeek<7 ? goal.daysPerWeek : 7;
+    goalStreak = dpw<7 ? weeklyStreak(goalDates, dpw) : streakFromDates(goalDates);
   }
 
   return { category, totalCount, logStreak, goalStreak, goal };
@@ -3189,11 +3221,52 @@ function computeCategoryStreak(category){
    โชว์เฉพาะ category ที่บันทึกสะสมมาแล้ว >= STREAK_MIN_COUNT ครั้ง เรียงจาก current streak มากไปน้อย
    (ถ้ามีเป้าหมาย ใช้ goalStreak.current เป็นหลักในการเรียง/ไฮไลต์แทน logStreak.current)
    ถ้าไม่มี category ไหนถึงเกณฑ์เลย ให้ fallback โชว์ 2 อันดับแรกที่ current streak สูงสุด (จากที่มีข้อมูลจริง) แทน */
+/* ไฟสตรีค — ปรับเกณฑ์/สีที่ตารางนี้ที่เดียว (min = จำนวนวันขั้นต่ำ; f = [ขอบล่าง, ขอบบน/กลาง, แกน]) */
+const FLAME_TIERS = [
+  { min:1,   name:'ส้มหม่น',    f:['#B8652A','#D98A4A','#F0BE8A'], glow:0, scale:.8 },
+  { min:3,   name:'ส้ม',        f:['#FF8A1F','#FFB347','#FFE3A6'], glow:4 },
+  { min:7,   name:'แดงส้ม',     f:['#FF4D2E','#FF8A3D','#FFD27A'], glow:5 },
+  { min:30,  name:'ทอง',        f:['#FFC53D','#FFE07A','#FFF7D6'], glow:6 },
+  { min:90,  name:'ฟ้า',        f:['#3DA5FF','#7CC4FF','#E0F2FF'], glow:7 },
+  { min:180, name:'ม่วง',       f:['#A56BFF','#C69BFF','#F1E6FF'], glow:8 },
+  { min:365, name:'ขาวร้อนแรง', f:['#FF6FA8','#FFC53D','#FFFFFF'], glow:10 },
+];
+const FLAME_SEEN_KEY = 'dtm_flame_seen';   // localStorage เท่านั้น (ระดับไฟที่เห็นล่าสุดต่อหมวด) ไม่แตะ appData / ไฟล์ / ซิงค์
+let flameSeq = 0;
+function flameTier(days){ let t=-1; FLAME_TIERS.forEach((x,i)=>{ if(days>=x.min) t=i; }); return t; }
+function flameSvg(t){
+  const id = 'fl'+(++flameSeq);   // id ต้องไม่ซ้ำต่อไอคอน ไม่งั้น gradient ทุกดวงจะใช้สีของดวงแรก
+  return `<svg class="flame" viewBox="0 0 32 40" aria-hidden="true"><defs>
+    <linearGradient id="${id}o" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="var(--f1)"/><stop offset="1" stop-color="var(--f2)"/></linearGradient>
+    <linearGradient id="${id}i" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="var(--f2)"/><stop offset="1" stop-color="var(--f3)"/></linearGradient></defs>
+    <g class="flame-body"><path fill="url(#${id}o)" d="M16 1C16 1 24 9 24 17C27 14.5 28 11 28 11C31 16 31 21 31 24C31 32.5 24.5 39 16 39C7.5 39 1 32.5 1 24C1 17.5 4.5 12.5 8 9.5C8.5 12 9.5 14 11 15.5C11.5 9 13 4.5 16 1Z"/>
+    <path fill="url(#${id}i)" d="M16 17C16 17 21 22 21 28C21 33 18.8 36 16 36C13.2 36 11 33 11 28C11 24 13.5 21.5 16 17Z"/></g></svg>`;
+}
+function flameFor(cat, sk){
+  const days = sk.equivDays, t = flameTier(days);
+  if(t<0) return { icon:'', next:'' };
+  let seen = {}; try{ seen = JSON.parse(localStorage.getItem(FLAME_SEEN_KEY)||'{}') || {}; }catch(e){}
+  let up = false;
+  if(document.getElementById('view-stats').classList.contains('active') && seen[cat]!==t){   // เล่นเอฟเฟกต์เฉพาะตอนเห็นหน้าสถิติ และครั้งเดียวต่อการข้ามระดับ
+    up = seen[cat]!==undefined && t>seen[cat] && !prefersReducedMotion();
+    seen[cat] = t; try{ localStorage.setItem(FLAME_SEEN_KEY, JSON.stringify(seen)); }catch(e){}
+  }
+  const T = FLAME_TIERS[t], nx = FLAME_TIERS[t+1];
+  const icon = `<span class="flame-wrap${up?' flame-up':''}${sk.pending?' dim':''}" style="--f1:${T.f[0]};--f2:${T.f[1]};--f3:${T.f[2]};--g:${T.glow}px;--fs:${T.scale||1}">${flameSvg(t)}</span>`;
+  let next = '';
+  if(nx){
+    const rem = nx.min - days;
+    next = `<div class="flame-next">อีก ${(sk.unit==='week' ? Math.ceil(rem/7) : rem).toLocaleString('th-TH')} ${sk.unit==='week' ? 'สัปดาห์' : 'วัน'}ถึงไฟสี${nx.name}</div>`;
+  }
+  return { icon, next };
+}
+
 function renderStreak(){
   const durationCats = CATEGORY_ORDER.filter(c=>c!=='wake' && c!=='sleep' && c!=='milestone_other');
   let stats = durationCats.map(computeCategoryStreak).filter(s=>s.totalCount>0);
-  const sortKey = s => s.goalStreak ? s.goalStreak.current : s.logStreak.current;
-  const longestKey = s => s.goalStreak ? s.goalStreak.longest : s.logStreak.longest;
+  const skOf = s => s.goalStreak || s.logStreak;
+  const sortKey = s => skOf(s).equivDays;
+  const longestKey = s => skOf(s).unit==='week' ? skOf(s).longest*7 : skOf(s).longest;
 
   let shown = stats.filter(s=>s.totalCount>=STREAK_MIN_COUNT);
   let fallback = false;
@@ -3217,29 +3290,31 @@ function renderStreak(){
 
     if(s.goal && s.goalStreak){
       const unitLabel = s.goal.unit==='pages' ? 'หน้า/วัน' : 'นาที/วัน';
+      const g = s.goalStreak, wk = g.unit==='week', fl = flameFor(s.category, g);
       return `<div class="streak-card${rankCls}">
         <div class="streak-card-cat">
           <span><span class="streak-card-dot" style="background:${color}"></span>${label}</span>
-          <span class="streak-goal-badge">🎯 ≥${s.goal.target.toLocaleString('th-TH')} ${unitLabel}</span>
+          <span class="streak-goal-badge">🎯 ≥${s.goal.target.toLocaleString('th-TH')} ${unitLabel}${wk ? ' · '+g.needed+' วัน/สัปดาห์' : ''}</span>
         </div>
         <div class="streak-num-row">
           <div class="streak-num-block">
-            <div class="streak-num">${s.goalStreak.current.toLocaleString('th-TH')}</div>
-            <div class="streak-lbl">ถึงเป้าติดต่อกัน</div>
+            <div class="streak-main">${fl.icon}<div class="streak-num">${g.current.toLocaleString('th-TH')}${wk ? '<span class="streak-unit"> สัปดาห์</span>' : ''}</div></div>
+            <div class="streak-lbl">${wk ? `สัปดาห์นี้ ${g.thisWeekHits}/${g.needed} วัน` : 'ถึงเป้าติดต่อกัน'}</div>${fl.next}
           </div>
           <div class="streak-num-block secondary">
             <div class="streak-num-sm">${s.logStreak.current.toLocaleString('th-TH')}</div>
             <div class="streak-lbl">มีบันทึกติดต่อกัน</div>
           </div>
         </div>
-        <div class="streak-sub">สถิติสูงสุด <b>${s.goalStreak.longest.toLocaleString('th-TH')}</b> วัน (ถึงเป้า) · บันทึกแล้ว ${s.totalCount.toLocaleString('th-TH')} ครั้ง</div>
+        <div class="streak-sub">สถิติสูงสุด <b>${g.longest.toLocaleString('th-TH')}</b> ${wk ? 'สัปดาห์' : 'วัน'} (ถึงเป้า) · บันทึกแล้ว ${s.totalCount.toLocaleString('th-TH')} ครั้ง</div>
       </div>`;
     }
 
+    const fl = flameFor(s.category, s.logStreak);
     return `<div class="streak-card${rankCls}">
       <div class="streak-card-cat"><span class="streak-card-dot" style="background:${color}"></span>${label}</div>
-      <div class="streak-num">${s.logStreak.current.toLocaleString('th-TH')}</div>
-      <div class="streak-lbl">วันติดต่อกันล่าสุด</div>
+      <div class="streak-main">${fl.icon}<div class="streak-num">${s.logStreak.current.toLocaleString('th-TH')}</div></div>
+      <div class="streak-lbl">วันติดต่อกันล่าสุด</div>${fl.next}
       <div class="streak-sub">สถิติสูงสุด <b>${s.logStreak.longest.toLocaleString('th-TH')}</b> วัน · บันทึกแล้ว ${s.totalCount.toLocaleString('th-TH')} ครั้ง</div>
     </div>`;
   }).join('');
@@ -3248,29 +3323,9 @@ function renderStreak(){
     (fallback ? `<div class="streak-caption">ยังไม่มีหมวดหมู่ไหนบันทึกครบ ${STREAK_MIN_COUNT} ครั้ง — แสดง 2 อันดับที่สตรีคสูงสุดไปก่อน</div>` : '');
 }
 
-/* ป้ายกำกับช่วงเวลาที่เลือกได้สำหรับกราฟ trend และฮีทแมป (คุมร่วมกันด้วยตัวแปรเดียว) */
+/* ป้ายกำกับช่วงเวลาที่เลือกได้สำหรับกราฟ trend */
 const RANGE_LABELS = { 7:'7 วันล่าสุด', 30:'30 วันล่าสุด', 90:'90 วันล่าสุด', all:'ทั้งหมด (รายสัปดาห์)' };
 let trendRangeKey = 30; // 7 | 30 | 90 | 'all'
-
-/* ชุดวันที่ (YYYY-MM-DD) ของ N วันล่าสุดนับรวมวันนี้ หรือ null ถ้าเป็น 'all' (ไม่กรองช่วง) */
-function rangeDateSet(rangeKey){
-  if(rangeKey === 'all') return null;
-  const today = new Date();
-  const set = new Set();
-  for(let i=rangeKey-1;i>=0;i--){
-    const d = new Date(today.getFullYear(), today.getMonth(), today.getDate()-i);
-    set.add(dateStrOf(d));
-  }
-  return set;
-}
-
-/* กิจกรรมที่มี duration ทั้งหมดภายในช่วงที่เลือก (อิง timelineDay) — ใช้ร่วมกันโดยฮีทแมป */
-function activitiesInRange(rangeKey){
-  const base = appData.activities.filter(a=>!a.isMilestone && a.durationMinutes);
-  if(rangeKey === 'all') return base;
-  const set = rangeDateSet(rangeKey);
-  return base.filter(a=>set.has(a.timelineDay));
-}
 
 /* รวม durationMinutes ต่อ category ในช่วงวันที่ [startDateStr, endDateStr] แบบรวมขอบ (อิง timelineDay)
    ใช้สำหรับเทียบกับ "ช่วงก่อนหน้า" ในกราฟ trend */
@@ -3503,81 +3558,19 @@ trendCanvasEl.addEventListener('touchmove', (e)=>{
 }, {passive:true});
 trendCanvasEl.addEventListener('touchend', hideTrendTooltip);
 
-/* สลับช่วงเวลา (7/30/90/ทั้งหมด) ที่ใช้ร่วมกันโดยกราฟ trend และฮีทแมปด้านล่าง */
+/* สลับช่วงเวลา (7/30/90/ทั้งหมด) ของกราฟ trend */
 document.getElementById('rangeToggle').addEventListener('click', (e)=>{
   const btn = e.target.closest('button[data-range]');
   if(!btn) return;
   const val = btn.dataset.range;
   trendRangeKey = (val === 'all') ? 'all' : parseInt(val, 10);
   renderTrendChart();
-  renderHeatmap();
 });
 
-/* แปลง hex สี (#RRGGBB) เป็น {r,g,b} สำหรับคำนวณความเข้มของสีในฮีทแมป */
+/* แปลง hex สี (#RRGGBB) เป็น {r,g,b} — ใช้ใน renderYearMap */
 function hexToRgb(hex){
   const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   return m ? { r:parseInt(m[1],16), g:parseInt(m[2],16), b:parseInt(m[3],16) } : { r:139,g:147,b:156 };
-}
-
-/* รวมเวลาที่ใช้ในแต่ละ "ชั่วโมงของวัน" (0-23) แยกตาม category จากกิจกรรมที่ให้มา
-   กิจกรรมที่คร่อมหลายชั่วโมงจะถูกแบ่งสัดส่วนเวลาไปยังแต่ละชั่วโมงตามจริง ไม่ใช่นับรวมที่ชั่วโมงเริ่มต้นอย่างเดียว
-   (กันไม่ให้กิจกรรมยาว ๆ เช่น ทำงาน 8 ชม. ไปกองอยู่ที่ชั่วโมงเริ่มต้นชั่วโมงเดียวอย่างผิดสัดส่วน) */
-function buildHourBuckets(activities){
-  const buckets = {};
-  CATEGORY_ORDER.forEach(k=>{ buckets[k] = new Array(24).fill(0); });
-  activities.forEach(a=>{
-    if(!a.startISO || !a.endISO) return;
-    const cat = normalizeCategoryKey(a.category);
-    let cursor = new Date(a.startISO);
-    const end = new Date(a.endISO);
-    let guard = 0;
-    while(cursor < end && guard < 2000){
-      const hour = cursor.getHours();
-      const nextBoundary = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate(), cursor.getHours()+1, 0, 0, 0);
-      const segEnd = nextBoundary < end ? nextBoundary : end;
-      buckets[cat][hour] += (segEnd - cursor)/60000;
-      cursor = segEnd;
-      guard++;
-    }
-  });
-  return buckets;
-}
-
-/* วาด grid ฮีทแมปช่วงเวลาที่มักทำกิจกรรมแต่ละหมวดหมู่ (0-23 น.) ตามช่วงเดียวกับกราฟ trend (trendRangeKey)
-   ความเข้มของสีในแต่ละแถว normalize เทียบกับชั่วโมงที่ใช้เวลามากที่สุดของหมวดนั้น ๆ เอง เพื่อให้เห็นแพทเทิร์น
-   ของหมวดที่ใช้เวลารวมน้อยได้ชัดเจนเท่า ๆ กับหมวดที่ใช้เวลารวมเยอะ */
-function renderHeatmap(){
-  document.getElementById('heatmapTitle').textContent = `ช่วงเวลาที่มักทำกิจกรรม แยกตามหมวดหมู่ (${RANGE_LABELS[trendRangeKey]})`;
-
-  const activities = activitiesInRange(trendRangeKey);
-  if(!activities.length){
-    document.getElementById('heatmap').innerHTML = `<span class="empty-inline">ยังไม่มีข้อมูลในช่วงที่เลือก</span>`;
-    document.getElementById('heatmapHours').innerHTML = '';
-    return;
-  }
-
-  const buckets = buildHourBuckets(activities);
-  const rowsHtml = CATEGORY_ORDER.map(k=>{
-    const arr = buckets[k];
-    const rowMax = Math.max(...arr);
-    const { r,g,b } = hexToRgb(CATEGORY_COLORS[k] || '#8B939C');
-    const cells = arr.map((mins,h)=>{
-      let bg = 'var(--paper-2)';
-      if(mins>0 && rowMax>0){
-        const alpha = Math.min(1, 0.18 + 0.82*(mins/rowMax));
-        bg = `rgba(${r},${g},${b},${alpha.toFixed(2)})`;
-      }
-      const range = `${pad2(h)}:00–${pad2((h+1)%24)}:00`;
-      const title = mins>0 ? `${CATEGORY_LABEL[k]} — ${range} — ${fmtDur(Math.round(mins))}` : `${CATEGORY_LABEL[k]} — ${range} — ไม่มีข้อมูล`;
-      return `<span class="heatmap-cell" style="background:${bg}" title="${title}"></span>`;
-    }).join('');
-    return `<div class="heatmap-row"><span class="heatmap-row-label">${CATEGORY_LABEL[k]}</span>${cells}</div>`;
-  }).join('');
-  document.getElementById('heatmap').innerHTML = rowsHtml;
-
-  const hourLabels = ['<span></span>'];
-  for(let h=0;h<24;h++) hourLabels.push(`<span>${h%3===0 ? h : ''}</span>`);
-  document.getElementById('heatmapHours').innerHTML = hourLabels.join('');
 }
 
 /* ---- Yearly contribution graph ----
@@ -3741,7 +3734,7 @@ window.addEventListener('resize', ()=>{
 /* ============================================================
    9. EXPORT / BACKUP / IMPORT
    ============================================================ */
-/* ใช้ร่วมกันระหว่าง btnExport / btnBackupDb — ต่างกันแค่ prefix ชื่อไฟล์กับข้อความ toast */
+/* ใช้กับ btnExport — prefix ชื่อไฟล์กับข้อความ toast ส่งเข้ามาเป็นพารามิเตอร์ */
 async function exportData(prefix, toastMsg){
   const blob = new Blob([JSON.stringify(appData,null,2)], {type:'application/json'});
   const name = `${prefix}-${todayStr()}.json`;
@@ -3763,10 +3756,7 @@ async function exportData(prefix, toastMsg){
 }
 
 document.getElementById('btnExport').addEventListener('click', ()=>{
-  exportData('timeline-export', 'Export ข้อมูลแล้ว');
-});
-document.getElementById('btnBackupDb').addEventListener('click', ()=>{
-  exportData('timeline-backup', 'สำรองข้อมูลแล้ว');
+  exportData('timeline-export', 'สำรองข้อมูลแล้ว');
 });
 
 /* escape comma/newline/quote ตามกติกา CSV มาตรฐาน
@@ -3955,7 +3945,10 @@ document.getElementById('hiddenFileInput').addEventListener('change', async (e)=
         if(!g || appData.goals[c.value]) return;
         const okUnit = g.unit==='minutes' || (g.unit==='pages' && c.value==='reading');
         if(okUnit && typeof g.target==='number' && g.target>0){
-          appData.goals[c.value] = { unit:g.unit, target:Math.round(g.target) };
+          const ng = { unit:g.unit, target:Math.round(g.target) };
+          const dpw = Math.round(g.daysPerWeek);
+          if(dpw>=1 && dpw<7) ng.daysPerWeek = dpw;
+          appData.goals[c.value] = ng;
         }
       });
     }
