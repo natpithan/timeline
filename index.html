@@ -1635,11 +1635,11 @@ async function bootApp(opts){
       }
     }catch(e){ btnReconnect.style.display = 'none'; }
   } else {
-    if(ghCfg()){ document.getElementById('btnUseLocal').click(); return; }
+    if(ghCfg() && !opts.skipReconnect){ document.getElementById('btnUseLocal').click(); return; } // ข้ามหน้าเริ่มต้นเฉพาะตอนเปิดแอปปกติ ไม่ใช่ตอนผู้ใช้กด "เปลี่ยน/เปิดไฟล์อื่น"
     document.getElementById('startupActionsFS').style.display='none';
     document.getElementById('startupActionsFallback').style.display='flex';
     document.getElementById('startupNote').textContent =
-      'เบราว์เซอร์นี้ไม่รองรับการเขียนไฟล์โดยตรง ระบบจะบันทึกข้อมูลไว้ใน browser storage แทน — ใช้ปุ่ม "Export JSON" เป็นประจำเพื่อสำรองข้อมูลเป็นไฟล์จริง (แนะนำให้เปิดด้วย Edge/Chrome เพื่อประสบการณ์เต็มรูปแบบ)';
+      'เบราว์เซอร์นี้ไม่รองรับการเขียนไฟล์โดยตรง ระบบจะบันทึกข้อมูลไว้ใน browser storage แทน — ใช้ปุ่ม "Export JSON" เป็นประจำเพื่อสำรองข้อมูลเป็นไฟล์จริง (แนะนำให้เปิดด้วย Edge/Chrome เพื่อประสบการณ์เต็มรูปแบบ — ถ้าใช้ Brave ให้เปิด brave://flags แล้วเปิด "File System Access API" จากนั้นรีสตาร์ทเบราว์เซอร์)';
   }
 }
 
