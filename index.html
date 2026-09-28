@@ -1,0 +1,3291 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0E1216">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Timeline">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Daily Timeline Manager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&family=Taviraj:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0E1216;
+    --ink-2:#1A2027;
+    --paper:#15191E;
+    --paper-2:#1F252B;
+    --card:#1B2026;
+    --card-raised:#232A32;
+    --text:#EAE6DC;
+    --text-soft:#9C9686;
+    --accent:#4FA595;
+    --accent-soft:#1E3733;
+    --brass:#D9A24B;
+    --brass-soft:#3A2F1B;
+    --brass-glow: rgba(217,162,75,.16);
+    --danger:#E28A7A;
+    --danger-soft:#3A2320;
+    --line:#2B3138;
+    --shadow: rgba(0,0,0,.45);
+    --radius:6px;
+    --radius-lg:10px;
+    --serif:"Taviraj",serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  html{ color-scheme: dark; }
+  body{
+    margin:0;
+    font-family:"Sarabun","Leelawadee UI","Tahoma","Segoe UI",sans-serif;
+    background:
+      radial-gradient(1100px 640px at 30% -14%, var(--brass-glow), transparent 60%),
+      var(--paper);
+    color:var(--text);
+    display:flex;
+    min-height:100vh;
+  }
+  ::selection{ background:var(--accent-soft); }
+  ::-webkit-scrollbar{ width:11px; height:11px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+  ::-webkit-scrollbar-thumb{ background:var(--paper-2); border-radius:8px; border:3px solid var(--paper); }
+  ::-webkit-scrollbar-thumb:hover{ background:var(--line); }
+  *{ scrollbar-color: var(--paper-2) transparent; scrollbar-width:thin; }
+  /* all:unset (ใช้กับปุ่มแบบ custom ทั่วทั้งหน้า) ลบ focus ring ของเบราว์เซอร์ไปด้วย ใส่กลับมาให้ใช้คีย์บอร์ด navigate ได้ */
+  button:focus-visible, .hist-row:focus-visible, [tabindex]:focus-visible{
+    outline:2px solid var(--accent); outline-offset:2px;
+  }
+
+  /* ---------- Sidebar ---------- */
+  .sidebar{
+    width:230px;
+    flex:0 0 230px;
+    background:var(--ink);
+    color:var(--text);
+    display:flex;
+    flex-direction:column;
+    padding:24px 16px;
+    position:relative;
+    box-shadow: 10px 0 30px -18px rgba(0,0,0,.7);
+  }
+  .sidebar::after{
+    content:'';
+    position:absolute; top:0; right:0; bottom:0; width:1px;
+    background:linear-gradient(to bottom, transparent, var(--line) 15%, var(--line) 85%, transparent);
+  }
+  .brand{
+    font-family:var(--serif);
+    font-size:19px;
+    font-weight:600;
+    letter-spacing:.1px;
+    color:var(--text);
+    margin-bottom:2px;
+    padding-left:12px;
+    border-left:3px solid var(--brass);
+  }
+  .brand small{
+    display:block;
+    font-family:"Sarabun",sans-serif;
+    font-weight:400;
+    font-size:12px;
+    color:var(--text-soft);
+    margin-top:3px;
+  }
+  .nav{ margin-top:30px; display:flex; flex-direction:column; gap:2px; }
+  .nav button{
+    all:unset;
+    cursor:pointer;
+    padding:10px 12px 10px 13px;
+    border-radius:0 var(--radius) var(--radius) 0;
+    font-size:14.5px;
+    color:var(--text-soft);
+    display:flex;
+    align-items:center;
+    gap:10px;
+    border-left:2px solid transparent;
+    transition:background .15s ease, color .15s ease, border-color .15s ease;
+  }
+  .nav button:hover{ background:var(--ink-2); color:var(--text); }
+  .nav button.active{ background:var(--accent-soft); color:var(--accent); border-left-color:var(--accent); font-weight:600; }
+  .nav .dot{ width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.6; }
+
+  .sidebar-bottom{ margin-top:auto; display:flex; flex-direction:column; gap:8px; }
+  .file-status{
+    font-size:12px;
+    color:var(--text-soft);
+    padding:10px 12px;
+    background:var(--ink-2);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    line-height:1.5;
+  }
+  .file-status b{ color:var(--text); display:block; font-size:13px; margin-bottom:2px; font-weight:600;}
+  .side-btn{
+    all:unset; cursor:pointer; text-align:left;
+    padding:8px 12px; border-radius:var(--radius);
+    font-size:13px; color:var(--text-soft); border:1px solid var(--line);
+    transition:background .15s ease, border-color .15s ease, color .15s ease;
+  }
+  .side-btn:hover{ background:var(--ink-2); border-color:#3B434C; color:var(--text); }
+  .backup-folder-block{ display:none; flex-direction:column; gap:6px; }
+  .file-status .clear-link{
+    display:inline-block; margin-top:4px; font-size:11px; color:var(--text-soft);
+    text-decoration:underline; cursor:pointer;
+  }
+  .file-status .clear-link:hover{ color:var(--text); }
+
+  /* ---------- Main ---------- */
+  .main{ flex:1; padding:36px 44px; max-width:920px; position:relative; }
+  .view{ display:none; }
+  .view.active{ display:block; }
+
+  h1{
+    font-family:var(--serif); font-size:25px; margin:0 0 5px 0; font-weight:600; letter-spacing:.1px;
+  }
+  .subtitle{ color:var(--text-soft); font-size:14px; margin-bottom:28px; }
+
+  /* Day header / switcher */
+  .day-bar{
+    display:flex; align-items:center; gap:10px; margin-bottom:22px; flex-wrap:wrap;
+  }
+  .day-bar .day-title{ font-size:18px; font-weight:700; margin-right:6px; }
+  .day-bar .weekday{ color:var(--text-soft); font-size:14px; margin-right:auto; }
+  .iconbtn{
+    all:unset; cursor:pointer; width:32px; height:32px; display:flex; align-items:center; justify-content:center;
+    border:1px solid var(--line); border-radius:var(--radius); background:var(--card); font-size:15px;
+    transition:background .15s ease, border-color .15s ease, transform .1s ease;
+  }
+  .iconbtn:hover{ background:var(--paper-2); border-color:#3B434C; }
+  .iconbtn:active{ transform:scale(.94); }
+  .pill{
+    padding:5px 12px; border-radius:999px; font-size:12.5px; font-weight:600;
+  }
+  .pill.open{ background:var(--brass-soft); color:var(--brass); }
+  .pill.completed{ background:var(--accent-soft); color:var(--accent); }
+
+  /* Today's goal progress — โชว์เหนือ toolbar ให้เห็นทันทีว่าวันนี้ถึงเป้าหรือยัง */
+  .today-goals{ display:flex; flex-direction:column; gap:8px; margin-bottom:20px; }
+  .today-goal-row{ background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:10px 14px; }
+  .today-goal-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:13px; }
+  .today-goal-name{ display:flex; align-items:center; gap:7px; color:var(--text); }
+  .today-goal-value{ font-variant-numeric:tabular-nums; color:var(--text-soft); white-space:nowrap; }
+  .today-goal-row.met .today-goal-value{ color:var(--accent); font-weight:700; }
+  .today-goal-track{ height:6px; border-radius:4px; background:var(--paper-2); overflow:hidden; margin-top:8px; }
+  .today-goal-fill{ height:100%; border-radius:4px; transition:width .2s ease; }
+
+  .btn{
+    all:unset; cursor:pointer; padding:9px 16px; border-radius:var(--radius);
+    font-size:14px; font-weight:600; display:inline-flex; align-items:center; gap:6px;
+    transition:background .15s ease, box-shadow .15s ease, transform .1s ease, border-color .15s ease;
+  }
+  .btn.primary{ background:var(--accent); color:var(--text); box-shadow:0 1px 2px rgba(0,0,0,.3); }
+  .btn.primary:hover{ background:#3F8C7E; transform:translateY(-1px); box-shadow:0 6px 16px -6px rgba(79,165,149,.5); }
+  .btn.primary:active{ transform:translateY(0); }
+  .btn.ghost{ background:var(--card); border:1px solid var(--line); color:var(--text); }
+  .btn.ghost:hover{ background:var(--paper-2); border-color:#3B434C; }
+  .btn.danger{ background:var(--danger-soft); color:var(--danger); }
+  .btn.danger:hover{ background:#4A2C28; }
+  .btn.small{ padding:6px 11px; font-size:13px; }
+  .btn[disabled]{ opacity:.45; cursor:not-allowed; }
+  .btn[disabled]:hover{ transform:none; box-shadow:none; }
+
+  .toolbar{ display:flex; gap:10px; margin-bottom:18px; flex-wrap:wrap; align-items:center; }
+  /* Quick-add chips: ทางลัดเปิด modal พร้อมเติมหมวดหมู่/ระยะเวลา/รายละเอียดที่ทำบ่อยให้ (ไม่ save เอง) */
+  .quick-chips{ display:inline-flex; gap:6px; flex-wrap:wrap; align-items:center; }
+  .quick-chip{
+    all:unset; cursor:pointer; display:inline-flex; align-items:center; gap:6px; padding:6px 12px;
+    border:1px solid var(--line); border-radius:999px; background:var(--card); color:var(--text-soft);
+    font-size:12.5px; font-variant-numeric:tabular-nums; transition:border-color .15s ease, color .15s ease, transform .1s ease;
+  }
+  .quick-chip:hover{ border-color:var(--accent); color:var(--text); }
+  .quick-chip:active{ transform:scale(.96); }
+  .timer-box{ display:flex; align-items:center; gap:6px; }
+  .timer-box select{ padding:7px 8px;border:1px solid var(--line);border-radius:6px;font-family:inherit;font-size:13px;background:var(--paper-2);color:var(--text); }
+  .timer-box.running{ background:var(--accent-soft); padding:6px 12px; border-radius:var(--radius); }
+  .timer-box.running #timerRunningLabel{ font-size:13px; font-weight:600; color:var(--accent); }
+
+  /* Ledger timeline — เส้นคั่นคอลัมน์แนวตั้งเลียนแบบสมุดบัญชีจริง คั่นระหว่างคอลัมน์เวลากับรายละเอียด */
+  .ledger{
+    background:var(--card); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden;
+    position:relative; box-shadow:0 16px 32px -24px var(--shadow);
+  }
+  .ledger::before{
+    content:''; position:absolute; top:0; bottom:0; left:146px; width:1px; background:var(--line); z-index:0;
+  }
+  .entry{
+    display:grid; grid-template-columns:118px 1fr auto; gap:14px;
+    padding:14px 18px; border-bottom:1px solid var(--line); align-items:start;
+    position:relative; z-index:1; border-left:3px solid var(--cat-color, transparent);
+    transition:background .12s ease;
+  }
+  .entry:last-child{ border-bottom:none; }
+  .entry:hover{ background:var(--paper-2); }
+  .entry .time{
+    font-variant-numeric:tabular-nums; font-weight:700; font-size:14.5px; padding-top:1px; color:var(--text);
+  }
+  .entry .time .approx{ color:var(--brass); font-weight:600; cursor:help; }
+  .entry .time .dur{ display:block; font-weight:400; font-size:12px; color:var(--text-soft); margin-top:3px; }
+  .entry .body .name{ font-weight:600; font-size:14.5px; }
+  .entry .body .cat{
+    display:inline-block; margin-left:8px; font-size:11.5px; padding:1px 8px; border-radius:999px;
+    background:var(--paper-2); color:var(--text-soft); vertical-align:1px;
+  }
+  .entry .body .detail{ color:var(--text-soft); font-size:13.5px; margin-top:4px; white-space:pre-wrap; }
+  .entry .actions{ display:flex; gap:6px; }
+  .entry .actions .iconbtn{ width:28px; height:28px; font-size:13px; }
+
+  .empty{
+    padding:40px 20px; text-align:center; color:var(--text-soft); font-size:14px;
+  }
+  .empty .big{ font-size:15px; color:var(--text); font-weight:600; margin-bottom:6px; }
+
+  /* History */
+  .month-group{ margin-bottom:26px; }
+  .month-title{ font-size:14px; font-weight:700; color:var(--text-soft); margin-bottom:8px; letter-spacing:.2px; }
+  .hist-row{
+    display:grid; grid-template-columns:150px 1fr auto auto; gap:12px; align-items:center;
+    padding:11px 16px; border-bottom:1px solid var(--line); cursor:pointer; background:var(--card);
+  }
+  .hist-row:first-of-type{ border-radius:var(--radius) var(--radius) 0 0; }
+  .hist-row:last-of-type{ border-bottom:none; border-radius:0 0 var(--radius) var(--radius); }
+  .hist-row:hover{ background:var(--paper-2); }
+  .hist-row .d{ font-weight:600; font-size:14px; }
+  .hist-row .wd{ color:var(--text-soft); font-size:13px; }
+  .hist-row .cnt{ font-size:13px; color:var(--text-soft); }
+
+  .history-filters{ display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
+  .history-filters input[type=text], .history-filters select{
+    padding:9px 11px; border:1px solid var(--line); border-radius:var(--radius);
+    font-size:14px; font-family:inherit; background:var(--paper-2); color:var(--text);
+  }
+  .history-filters input[type=text]{ flex:1; min-width:160px; }
+
+  /* Stats — hero card คือจุดเด่นหลักของหน้านี้ ใช้แสง brass ส่องเบาๆ ด้านหลังตัวเลข */
+  .stat-hero{
+    display:flex; align-items:flex-end; justify-content:space-between; gap:20px; flex-wrap:wrap;
+    background: radial-gradient(460px 220px at 90% -25%, var(--brass-glow), transparent 65%), var(--card-raised);
+    border:1px solid var(--line); border-radius:var(--radius-lg);
+    padding:26px 28px; margin-bottom:16px; overflow:hidden; position:relative;
+    box-shadow:0 24px 48px -28px var(--shadow);
+  }
+  .stat-hero .hero-num{ font-family:var(--serif); font-size:42px; font-weight:600; letter-spacing:-.3px; line-height:1.1; font-variant-numeric:tabular-nums; }
+  .stat-hero .hero-lbl{ font-size:13.5px; color:var(--text-soft); margin-top:7px; }
+  .stat-hero .hero-side{ display:flex; gap:26px; }
+  .stat-hero .mini{ text-align:right; }
+  .stat-hero .mini .mini-num{ font-family:var(--serif); font-size:20px; font-weight:600; color:var(--accent); font-variant-numeric:tabular-nums; }
+  .stat-hero .mini .mini-lbl{ font-size:12px; color:var(--text-soft); margin-top:3px; }
+
+  .stat-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:18px; }
+  .stat-card{ background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:16px 18px; transition:border-color .15s ease, transform .15s ease; }
+  .stat-card:hover{ border-color:rgba(217,162,75,.45); transform:translateY(-1px); }
+  .stat-card .num{ font-family:var(--serif); font-size:22px; font-weight:600; color:var(--text); font-variant-numeric:tabular-nums; }
+  .stat-card .lbl{ font-size:12.5px; color:var(--text-soft); margin-top:4px; }
+
+  /* หมวดหมู่ใน Stats ไม่ใช้กรอบการ์ดซ้อนกันเป็นตับอีกต่อไป — คั่นด้วยเส้นบางๆ แบบหน้ารายงาน/ledger แทน */
+  .stat-section{ background:transparent; border:none; border-top:1px solid var(--line); border-radius:0; padding:22px 0 0; margin-top:28px; }
+  .stat-section-title{ font-family:var(--serif); font-size:16.5px; font-weight:600; margin-bottom:14px; letter-spacing:.1px; }
+  .stat-section-head{ display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:14px; }
+  .stat-section-head .stat-section-title{ margin-bottom:0; }
+  .seg-sm button{ padding:6px 12px; font-size:12.5px; }
+  .empty-inline{ color:var(--text-soft); font-size:13.5px; padding:6px 2px; display:block; }
+
+  /* Category breakdown bars */
+  .cat-bar-row{ padding:11px 2px; }
+  .cat-bar-row + .cat-bar-row{ margin-top:10px; }
+  .cat-bar-head{ display:flex; align-items:baseline; justify-content:space-between; font-size:13.5px; margin-bottom:7px; gap:10px; }
+  .cat-bar-name{ display:flex; align-items:center; gap:8px; color:var(--text); }
+  .cat-dot{ width:8px; height:8px; border-radius:50%; flex:0 0 auto; }
+  .cat-bar-value{ display:flex; align-items:baseline; gap:8px; white-space:nowrap; }
+  .cat-bar-value b{ font-variant-numeric:tabular-nums; font-size:13.5px; }
+  .cat-bar-pct{ color:var(--text-soft); font-size:12px; font-variant-numeric:tabular-nums; width:34px; text-align:right; }
+  .cat-bar-track{ height:7px; border-radius:4px; background:var(--paper-2); overflow:hidden; }
+  .cat-bar-fill{ height:100%; border-radius:4px; }
+
+  /* Streak (แยกตาม category) — การ์ดอันดับ 1 เด่นกว่านิดหน่อยด้วยกรอบ brass ที่เหลือเรียบสงบ */
+  .streak-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(154px,1fr)); gap:12px; }
+  .streak-card{ background:var(--paper-2); border:1px solid var(--line); border-radius:var(--radius); padding:15px 17px; position:relative; transition:transform .15s ease, border-color .15s ease; }
+  .streak-card:hover{ transform:translateY(-1px); }
+  .streak-card.rank-1{
+    background: radial-gradient(220px 120px at 100% -20%, var(--brass-glow), transparent 70%), var(--card-raised);
+    border-color:rgba(217,162,75,.55);
+  }
+  .streak-card-cat{ font-size:12.5px; color:var(--text-soft); margin-bottom:9px; display:flex; align-items:center; justify-content:space-between; gap:6px; }
+  .streak-card-cat > span:first-child{ display:flex; align-items:center; gap:6px; }
+  .streak-card-dot{ width:8px; height:8px; border-radius:50%; flex:none; }
+  .streak-goal-badge{ font-size:10.5px; color:var(--brass); background:var(--brass-soft); padding:2px 7px; border-radius:20px; white-space:nowrap; flex:none; }
+  .streak-num{ font-family:var(--serif); font-size:27px; font-weight:600; color:var(--accent); line-height:1; }
+  .rank-1 .streak-num{ color:var(--brass); }
+  .streak-num-row{ display:flex; align-items:flex-end; gap:18px; }
+  .streak-num-block.secondary{ opacity:.7; }
+  .streak-num-sm{ font-family:var(--serif); font-size:17px; font-weight:600; color:var(--text-soft); line-height:1; }
+  .streak-lbl{ font-size:11.5px; color:var(--text-soft); margin-top:6px; }
+  .streak-sub{ font-size:11.5px; color:var(--text-soft); margin-top:9px; padding-top:9px; border-top:1px solid var(--line); }
+  .streak-sub b{ color:var(--text); font-weight:700; }
+  .streak-caption{ font-size:12px; color:var(--text-soft); margin-top:12px; }
+  .streak-empty{ font-size:13px; color:var(--text-soft); }
+
+  /* Trend chart */
+  .trend-wrap{ position:relative; }
+  .trend-tooltip{
+    position:absolute; pointer-events:none; opacity:0; transform:translateY(2px);
+    transition:opacity .12s ease, transform .12s ease; background:var(--ink); border:1px solid var(--line);
+    border-radius:var(--radius); padding:10px 12px; font-size:12.5px; min-width:150px; z-index:5;
+    box-shadow:0 10px 24px rgba(0,0,0,.4);
+  }
+  .trend-tooltip.show{ opacity:1; transform:translateY(0); }
+  .tt-date{ font-weight:700; margin-bottom:6px; color:var(--text); }
+  .tt-row{ display:flex; align-items:center; gap:7px; padding:2px 0; color:var(--text-soft); }
+  .tt-row .tt-dot{ width:7px; height:7px; border-radius:2px; flex:0 0 auto; }
+  .tt-row b{ margin-left:auto; color:var(--text); font-variant-numeric:tabular-nums; font-weight:600; }
+  .tt-total{ margin-top:6px; padding-top:6px; border-top:1px solid var(--line); display:flex; justify-content:space-between; color:var(--text-soft); }
+  .tt-total b{ color:var(--text); font-variant-numeric:tabular-nums; }
+  #trendLegend{ display:flex; flex-wrap:wrap; gap:8px 18px; }
+  .trend-legend-item{ display:inline-flex; align-items:center; gap:6px; font-size:12.5px; color:var(--text-soft); }
+  .trend-legend-dot{ width:9px; height:9px; border-radius:50%; display:inline-block; flex:0 0 auto; }
+  .trend-legend-total{ color:var(--text); font-weight:600; font-variant-numeric:tabular-nums; }
+  .trend-legend-delta{ font-size:11px; font-variant-numeric:tabular-nums; }
+  .trend-legend-delta.up{ color:var(--accent); }
+  .trend-legend-delta.down{ color:var(--danger); }
+  .trend-legend-delta.flat{ color:var(--text-soft); }
+  .trend-compare-note{ font-size:12px; color:var(--text-soft); margin-top:10px; }
+
+  /* Hour-of-day heatmap */
+  .heatmap{ display:flex; flex-direction:column; gap:3px; overflow-x:auto; }
+  .heatmap-row{ display:grid; grid-template-columns:150px repeat(24,1fr); align-items:center; gap:2px; }
+  .heatmap-row-label{ font-size:12.5px; color:var(--text-soft); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-right:8px; }
+  .heatmap-cell{ aspect-ratio:1/1; min-width:9px; border-radius:2px; background:var(--paper-2); transition:transform .1s ease; }
+  .heatmap-cell:hover{ transform:scale(1.25); }
+  .heatmap-hours{ display:grid; grid-template-columns:150px repeat(24,1fr); gap:2px; margin-top:6px; }
+  .heatmap-hours span{ font-size:10px; color:var(--text-soft); text-align:center; }
+
+  /* Yearly contribution graph — 53 สัปดาห์ x 7 วัน สีเดียว (accent) 5 ระดับ */
+  .yearmap{ overflow-x:auto; padding-bottom:4px; }
+  .yearmap-grid{ display:grid; grid-template-columns:26px repeat(53, minmax(10px,1fr)); gap:3px; min-width:640px; align-items:center; }
+  .yearmap-cell{ aspect-ratio:1/1; border-radius:2px; background:var(--paper-2); }
+  .yearmap-cell:hover{ outline:1px solid var(--text-soft); }
+  .yearmap-month{ font-size:10.5px; color:var(--text-soft); white-space:nowrap; overflow:visible; line-height:1; margin-bottom:2px; }
+  .yearmap-dow{ font-size:10px; color:var(--text-soft); line-height:1; }
+  .yearmap-foot{ display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-top:10px; font-size:12px; color:var(--text-soft); }
+  .yearmap-legend{ display:flex; align-items:center; gap:4px; }
+  .yearmap-legend .yearmap-cell{ width:11px; aspect-ratio:auto; height:11px; }
+  .yearmap-legend .yearmap-cell:hover{ outline:none; }
+
+  /* Modal */
+  .overlay{
+    position:fixed; inset:0; background:rgba(8,10,13,.65); display:none;
+    align-items:center; justify-content:center; z-index:50; padding:20px;
+  }
+  .overlay.active{ display:flex; }
+  .modal{
+    background:var(--card-raised); border:1px solid var(--line); width:100%; max-width:520px; border-radius:var(--radius-lg); padding:26px 26px 20px;
+    max-height:88vh; overflow:auto; box-shadow:0 30px 70px -24px var(--shadow);
+  }
+  .modal h2{ font-family:var(--serif); font-weight:600; margin:0 0 18px; font-size:18px; }
+  .field{ margin-bottom:14px; }
+  .field label{ display:block; font-size:13px; font-weight:600; margin-bottom:5px; color:var(--text); }
+  .field .hint{ font-size:12px; color:var(--text-soft); margin-top:4px; }
+  .field input[type=text], .field input[type=number], .field input[type=date], .field select, .field textarea{
+    width:100%; padding:9px 11px; border:1px solid var(--line); border-radius:var(--radius);
+    font-size:14px; font-family:inherit; background:var(--paper-2); color:var(--text);
+    transition:border-color .15s ease;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus{ outline:none; border-color:var(--accent); }
+  .goal-unit-fixed{
+    display:flex; align-items:center; padding:9px 11px; border:1px solid var(--line); border-radius:var(--radius);
+    font-size:14px; color:var(--text-soft); background:var(--paper-2);
+  }
+  .goal-field + .goal-field{ margin-top:14px; padding-top:14px; border-top:1px solid var(--line); }
+  .field input::placeholder, .field textarea::placeholder{ color:#6B655A; }
+  .field textarea{ resize:vertical; min-height:56px; }
+  /* Pop-up แนะนำ "รายละเอียด" ที่เคยกรอกซ้ำๆ ในหมวดหมู่เดียวกันตั้งแต่ 3 ครั้งขึ้นไป */
+  .detail-wrap{ position:relative; }
+  .detail-suggest{
+    display:none; position:absolute; left:0; right:0; top:calc(100% + 4px); z-index:20;
+    background:var(--card-raised); border:1px solid var(--line); border-radius:var(--radius);
+    max-height:160px; overflow:auto; box-shadow:0 8px 20px rgba(0,0,0,.4);
+  }
+  .detail-suggest.active{ display:block; }
+  .detail-suggest-item{
+    padding:8px 11px; font-size:13.5px; color:var(--text); cursor:pointer;
+    display:flex; justify-content:space-between; align-items:center; gap:10px;
+  }
+  .detail-suggest-item:hover{ background:var(--accent-soft); }
+  .detail-suggest-item + .detail-suggest-item{ border-top:1px solid var(--line); }
+  .detail-suggest-label{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .detail-suggest-count{ font-size:11.5px; color:var(--text-soft); flex:0 0 auto; white-space:nowrap; }
+  .timepick{ display:flex; align-items:center; gap:6px; }
+  .timepick select{ width:64px; flex:0 0 auto; text-align:center; font-variant-numeric:tabular-nums; }
+  .timepick .colon{ font-weight:700; color:var(--text-soft); }
+  .row2{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .seg{ display:flex; border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; }
+  .seg button{
+    all:unset; cursor:pointer; flex:1; text-align:center; padding:8px; font-size:13.5px; color:var(--text-soft);
+  }
+  .seg button.active{ background:var(--accent); color:var(--text); }
+  .checkline{ display:flex; align-items:center; gap:8px; font-size:13.5px; color:var(--text); margin-top:6px; }
+  .checkline input{ width:15px; height:15px; }
+  .modal-actions{ display:flex; justify-content:flex-end; gap:10px; margin-top:18px; }
+  .err{ color:var(--danger); font-size:13px; margin-top:10px; display:none; }
+  .err.active{ display:block; }
+
+  /* Startup screen */
+  .startup{
+    position:fixed; inset:0;
+    background: radial-gradient(1000px 600px at 50% -10%, var(--brass-glow), transparent 60%), var(--paper);
+    display:flex; align-items:center; justify-content:center; z-index:100;
+  }
+  .startup-box{ max-width:480px; text-align:center; padding:20px; }
+  .startup-box h1{ font-family:var(--serif); font-weight:600; font-size:25px; margin-bottom:10px; }
+  .startup-box p{ color:var(--text-soft); font-size:14.5px; line-height:1.6; margin-bottom:26px; }
+  .startup-actions{ display:flex; flex-direction:column; gap:10px; align-items:stretch; }
+  .startup-note{ margin-top:22px; font-size:12.5px; color:var(--text-soft); line-height:1.6; }
+
+  .toast{
+    position:fixed; bottom:20px; right:20px; background:var(--card-raised); color:var(--text); padding:11px 18px;
+    border:1px solid var(--line); border-radius:var(--radius); font-size:13px; opacity:0; transform:translateY(8px);
+    transition:all .25s ease; z-index:200; pointer-events:none;
+    display:flex; align-items:center; gap:12px; box-shadow:0 16px 36px -14px var(--shadow);
+  }
+  .toast.show{ opacity:1; transform:translateY(0); }
+  .toast.has-action{ pointer-events:auto; }
+  .toast-action{
+    all:unset; cursor:pointer; color:var(--accent); font-weight:700; font-size:13px;
+    padding:2px 4px; flex-shrink:0;
+  }
+  .toast-action:hover{ text-decoration:underline; }
+
+  @media (max-width:720px){
+    body{ flex-direction:column; }
+    .sidebar{ width:100%; flex-direction:row; flex-wrap:wrap; padding:14px; }
+    .nav{ flex-direction:row; margin-top:0; flex-wrap:wrap; }
+    .sidebar-bottom{ margin-top:0; flex-direction:row; flex-wrap:wrap; }
+    .main{ padding:20px; }
+    .stat-hero{ flex-direction:column; align-items:flex-start; padding:20px; }
+    .stat-hero .hero-side{ gap:20px; }
+    .stat-grid{ grid-template-columns:1fr 1fr; }
+    .streak-grid{ grid-template-columns:repeat(2,1fr); }
+    .heatmap-row, .heatmap-hours{ grid-template-columns:78px repeat(24,minmax(14px,1fr)); }
+    .heatmap-row-label{ font-size:11px; }
+    .entry{ grid-template-columns:90px 1fr; }
+    .entry .actions{ grid-column:1/-1; justify-content:flex-end; }
+    .ledger::before{ left:118px; }
+    .sidebar::after{ display:none; }
+    .brand{ border-left:none; padding-left:0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="startup" id="startup">
+  <div class="startup-box">
+    <h1>Daily Timeline Manager</h1>
+    <p>
+      บันทึกไทม์ไลน์ชีวิตประจำวันของคุณ เก็บเป็นไฟล์จริงบนเครื่อง ไม่ใช้คลาวด์<br>
+      เลือกเปิดไฟล์ข้อมูลเดิม หรือสร้างไฟล์ใหม่เพื่อเริ่มต้น
+    </p>
+    <div class="startup-actions" id="startupActionsFS">
+      <button class="btn primary" id="btnReconnectLast" style="display:none;"></button>
+      <button class="btn ghost" id="btnOpenFile">📂 เปิดไฟล์ข้อมูลเดิม (.json)</button>
+      <button class="btn ghost" id="btnNewFile">＋ สร้างไฟล์ข้อมูลใหม่</button>
+    </div>
+    <div class="startup-actions" id="startupActionsFallback" style="display:none;">
+      <button class="btn primary" id="btnUseLocal">เริ่มใช้งาน (บันทึกใน browser)</button>
+    </div>
+    <div class="startup-note" id="startupNote"></div>
+  </div>
+</div>
+
+<div class="sidebar" id="sidebar" style="display:none;">
+  <div class="brand">Daily Timeline<small>Manager — เก็บไฟล์ในเครื่อง</small></div>
+  <div class="nav">
+    <button data-view="today" class="active"><span class="dot"></span> วันนี้ / Timeline</button>
+    <button data-view="history"><span class="dot"></span> ประวัติย้อนหลัง</button>
+    <button data-view="stats"><span class="dot"></span> สถิติ</button>
+  </div>
+  <div class="sidebar-bottom">
+    <div class="file-status" id="fileStatus"><b>ไฟล์ข้อมูล</b>กำลังโหลด…</div>
+    <div class="backup-folder-block" id="backupFolderBlock">
+      <div class="file-status" id="backupFolderStatus" style="display:none;">
+        <b id="backupFolderName"></b>
+        <span id="backupFolderTime"></span>
+        <a href="#" id="lnkClearBackupFolder" class="clear-link">เลิกใช้โฟลเดอร์นี้</a>
+      </div>
+      <button class="side-btn" id="btnSetBackupFolder" style="display:none;">🗄 ตั้งโฟลเดอร์สำรองอัตโนมัติ</button>
+      <button class="side-btn" id="btnReconnectBackupFolder" style="display:none;">🔌 เชื่อมต่อโฟลเดอร์สำรองอีกครั้ง</button>
+    </div>
+    <button class="side-btn" id="btnExport">⤓ Export JSON (สำเนา)</button>
+    <button class="side-btn" id="btnExportCsv">📊 Export CSV</button>
+    <button class="side-btn" id="btnBackupDb">🗂 สำรองไฟล์ข้อมูล</button>
+    <button class="side-btn" id="btnImport">⤴ Import JSON</button>
+    <button class="side-btn" id="btnSwitchFile">🔁 เปลี่ยน/เปิดไฟล์อื่น</button>
+    <button class="side-btn" id="btnRecoverBackup" title="ใช้เมื่อบันทึกลงไฟล์ล้มเหลว หรือข้อมูลปัจจุบันดูไม่ตรง">🛟 กู้คืนจาก Backup ในเบราว์เซอร์</button>
+  </div>
+</div>
+
+<div class="main" id="mainArea" style="display:none;">
+
+  <!-- TODAY VIEW -->
+  <div class="view active" id="view-today">
+    <h1>Timeline วันนี้</h1>
+    <div class="subtitle">หนึ่ง "timeline day" เริ่มจากเวลาตื่น และจบเมื่อเข้านอนจริง แม้ข้ามเที่ยงคืนก็ยังนับเป็นวันเดิม</div>
+
+    <div class="day-bar">
+      <button class="iconbtn" id="btnPrevDay" aria-label="วันก่อนหน้า">‹</button>
+      <input type="date" id="dayPicker" style="padding:7px 10px;border:1px solid var(--line);border-radius:6px;font-family:inherit;font-size:14px;background:var(--paper-2);color:var(--text);">
+      <button class="iconbtn" id="btnNextDay" aria-label="วันถัดไป">›</button>
+      <button class="btn ghost small" id="btnToday">วันนี้</button>
+      <span class="weekday" id="weekdayLabel"></span>
+      <span class="pill open" id="dayStatusPill">ยังไม่มีข้อมูล</span>
+    </div>
+
+    <div class="today-goals" id="todayGoals" style="display:none;"></div>
+
+    <div class="toolbar">
+      <button class="btn primary" id="btnAddActivity">＋ เพิ่มกิจกรรม</button>
+      <span class="quick-chips" id="quickChips"></span>
+      <span class="timer-box" id="timerIdleBox">
+        <select id="quickTimerCategory"></select>
+        <button class="btn ghost" id="btnStartTimer">▶ เริ่มตอนนี้</button>
+      </span>
+      <span class="timer-box running" id="timerRunningBox" style="display:none;">
+        <span id="timerRunningLabel"></span>
+        <button class="btn ghost small" id="btnStopTimer">⏹ หยุด</button>
+      </span>
+      <button class="btn ghost" id="btnCopyYesterday">⧉ คัดลอกจากเมื่อวาน</button>
+      <button class="btn ghost" id="btnCloseDay">✓ จบ Timeline วันนี้</button>
+      <button class="btn danger" id="btnDeleteDay">🗑 ลบทั้งวันนี้</button>
+    </div>
+
+    <div class="ledger" id="ledger"></div>
+  </div>
+
+  <!-- HISTORY VIEW -->
+  <div class="view" id="view-history">
+    <h1>ประวัติย้อนหลัง</h1>
+    <div class="subtitle">คลิกวันที่เพื่อดูรายละเอียด</div>
+    <div class="history-filters">
+      <input type="text" id="historySearch" placeholder="ค้นหาในรายละเอียดกิจกรรม…">
+      <select id="historyCategoryFilter">
+        <option value="">ทุกหมวดหมู่</option>
+      </select>
+    </div>
+    <div id="historyContainer"></div>
+  </div>
+
+  <!-- STATS VIEW -->
+  <div class="view" id="view-stats">
+    <h1>สถิติ</h1>
+    <div class="subtitle">ภาพรวมทั้งหมดจากข้อมูลที่บันทึกไว้</div>
+
+    <div class="stat-hero" id="statHero"></div>
+    <div class="stat-grid" id="statGrid"></div>
+
+    <div class="stat-section">
+      <div class="stat-section-head">
+        <div class="stat-section-title">เวลาแยกตามหมวดหมู่</div>
+        <button class="btn ghost small" id="btnSetGoals">🎯 ตั้งเป้าหมาย</button>
+      </div>
+      <div class="cat-stats" id="catStats"></div>
+    </div>
+
+    <div class="stat-section">
+      <div class="stat-section-title">ความต่อเนื่อง</div>
+      <div id="streakBox"></div>
+    </div>
+
+    <div class="stat-section">
+      <div class="stat-section-title">สถิติการนอน</div>
+      <div class="stat-grid" id="sleepStatsGrid"></div>
+    </div>
+
+    <div class="stat-section">
+      <div class="stat-section-head">
+        <div class="stat-section-title" id="trendTitle">แนวโน้มเวลาแยกตามหมวดหมู่</div>
+        <div class="seg seg-sm" id="rangeToggle">
+          <button data-range="7">7 วัน</button>
+          <button data-range="30" class="active">30 วัน</button>
+          <button data-range="90">90 วัน</button>
+          <button data-range="all">ทั้งหมด</button>
+        </div>
+      </div>
+      <div class="trend-wrap">
+        <canvas id="trendCanvas" style="width:100%;display:block;"></canvas>
+        <div class="trend-tooltip" id="trendTooltip"></div>
+      </div>
+      <div id="trendLegend" style="margin-top:12px;"></div>
+      <div class="trend-compare-note" id="trendCompareNote"></div>
+    </div>
+
+    <div class="stat-section">
+      <div class="stat-section-title" id="heatmapTitle">ช่วงเวลาที่มักทำกิจกรรม แยกตามหมวดหมู่</div>
+      <div class="heatmap" id="heatmap"></div>
+      <div class="heatmap-hours" id="heatmapHours"></div>
+    </div>
+
+    <div class="stat-section">
+      <div class="stat-section-title">ภาพรวมทั้งปี</div>
+      <div class="yearmap" id="yearMap"></div>
+      <div class="yearmap-foot" id="yearMapFoot"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit Activity Modal -->
+<div class="overlay" id="modalOverlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <h2 id="modalTitle">เพิ่มกิจกรรม</h2>
+
+    <div class="field">
+      <label>ประเภทรายการ</label>
+      <div class="seg" id="segType">
+        <button type="button" data-type="duration" class="active">ช่วงเวลา (เริ่ม–สิ้นสุด)</button>
+        <button type="button" data-type="milestone">จุดเวลาเดียว (ตื่น / นอน ฯลฯ)</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="fTimelineDay">Timeline Day (วันของ Timeline)</label>
+      <input type="date" id="fTimelineDay">
+      <div class="hint">กิจกรรมหลังเที่ยงคืนที่ยังนับเป็น Timeline Day เดิม ให้คงวันนี้ไว้ได้เลย ระบบจะเดาการข้ามเที่ยงคืนให้อัตโนมัติ</div>
+    </div>
+
+    <div class="field">
+      <label id="lblCategory" for="fCategory">กิจกรรม *</label>
+      <select id="fCategory"></select>
+    </div>
+
+    <div class="field" id="fieldPages">
+      <label for="fPages">จำนวนหน้า (ถ้ามี)</label>
+      <input type="number" id="fPages" min="0" placeholder="เช่น 66">
+    </div>
+
+    <div class="field" id="fieldDetail">
+      <label for="fDetail">รายละเอียด</label>
+      <div class="detail-wrap">
+        <textarea id="fDetail" placeholder="เช่น อ่าน The Inmate" autocomplete="off"></textarea>
+        <div class="detail-suggest" id="fDetailSuggest"></div>
+      </div>
+    </div>
+
+    <div class="field" id="fieldStartTime">
+      <label id="lblStart" for="fStartTimeH">เวลา *</label>
+      <div class="row2">
+        <div class="timepick" id="fStartTimeWrap">
+          <select id="fStartTimeH"></select><span class="colon">:</span><select id="fStartTimeM"></select>
+        </div>
+        <select id="fStartPrecision">
+          <option value="exact">เวลาที่ระบุแน่นอน</option>
+          <option value="approximate">เวลาโดยประมาณ</option>
+        </select>
+      </div>
+      <label class="checkline" id="startCrossWrap"><input type="checkbox" id="fStartCross"> ข้ามเที่ยงคืนจาก Timeline Day <span class="hint" style="margin:0;">(ระบบเดาให้อัตโนมัติ ปรับได้หากไม่ตรง)</span></label>
+    </div>
+
+    <div class="field" id="fieldReverseCalc" style="display:none;">
+      <label class="checkline"><input type="checkbox" id="fUseReverse"> คำนวณเวลาเริ่มจากระยะเวลาโดยประมาณ (รู้แค่เวลาสิ้นสุดที่แน่นอน)</label>
+      <div id="reverseInputs" style="display:none; margin-top:8px;">
+        <div class="row2">
+          <input type="number" id="fDurHours" min="0" placeholder="ชั่วโมง">
+          <input type="number" id="fDurMins" min="0" max="59" placeholder="นาที">
+        </div>
+        <div class="hint">ระบบจะคำนวณเวลาเริ่มต้นให้ และบันทึกไว้ว่าเป็น "คำนวณ"</div>
+        <label class="checkline" id="endCrossWrap"><input type="checkbox" id="fEndCross"> เวลาสิ้นสุดนี้อยู่หลังเที่ยงคืนของ Timeline Day <span class="hint" style="margin:0;">(ระบบเดาให้อัตโนมัติ ปรับได้หากไม่ตรง)</span></label>
+        <div class="hint" id="reverseDateHint"></div>
+      </div>
+    </div>
+
+    <div class="field" id="fieldEndTime">
+      <label for="fEndTimeH">เวลาสิ้นสุด *</label>
+      <div class="row2">
+        <div class="timepick" id="fEndTimeWrap">
+          <select id="fEndTimeH"></select><span class="colon">:</span><select id="fEndTimeM"></select>
+        </div>
+        <select id="fEndPrecision">
+          <option value="exact">เวลาที่ระบุแน่นอน</option>
+          <option value="approximate">เวลาโดยประมาณ</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="err" id="modalErr"></div>
+
+    <div class="modal-actions">
+      <button class="btn ghost" id="btnModalCancel">ยกเลิก</button>
+      <button class="btn primary" id="btnModalSave">บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- Goals Modal -->
+<div class="overlay" id="goalsOverlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="goalsModalTitle">
+    <h2 id="goalsModalTitle">🎯 ตั้งเป้าหมายรายวัน</h2>
+    <div class="hint" style="margin-bottom:16px;">ใส่ 0 หรือเว้นว่างไว้สำหรับหมวดที่ไม่ต้องการตั้งเป้า — ทุกหมวดเป็นนาที/วัน ยกเว้น "อ่านหนังสือ" เลือกได้ว่านาทีหรือหน้า/วัน</div>
+    <div id="goalsFieldList"></div>
+    <div class="modal-actions">
+      <button class="btn ghost" id="btnGoalsCancel">ยกเลิก</button>
+      <button class="btn primary" id="btnGoalsSave">บันทึกเป้าหมาย</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<input type="file" id="hiddenFileInput" accept="application/json" style="display:none;">
+
+<script>
+(function(){
+"use strict";
+
+/* ============================================================
+   1. CORE DATE / DURATION LOGIC
+   ============================================================ */
+function pad2(n){ return n.toString().padStart(2,'0'); }
+
+function parseTimeStr(str){
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(str||'').trim());
+  if(!m) return null;
+  const h = parseInt(m[1],10), mi = parseInt(m[2],10);
+  if(h<0||h>23||mi<0||mi>59) return null;
+  return {h, m: mi};
+}
+function addDaysToDateStr(dateStr, days){
+  const [y,mo,d] = dateStr.split('-').map(Number);
+  const dt = new Date(y, mo-1, d);
+  dt.setDate(dt.getDate()+days);
+  return `${dt.getFullYear()}-${pad2(dt.getMonth()+1)}-${pad2(dt.getDate())}`;
+}
+function combineDateTime(dateStr, t){
+  const [y,mo,d] = dateStr.split('-').map(Number);
+  return new Date(y, mo-1, d, t.h, t.m, 0, 0);
+}
+function computeStartDateTime(timelineDay, startTimeStr, crossesMidnight){
+  const t = parseTimeStr(startTimeStr);
+  if(!t) return null;
+  const dateStr = crossesMidnight ? addDaysToDateStr(timelineDay,1) : timelineDay;
+  return combineDateTime(dateStr, t);
+}
+function computeEndDateTime(startDate, endTimeStr){
+  const t = parseTimeStr(endTimeStr);
+  if(!t) return null;
+  let endDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate(), t.h, t.m, 0, 0);
+  if(endDate.getTime() < startDate.getTime()){
+    endDate.setDate(endDate.getDate()+1);
+  }
+  return endDate;
+}
+function durationMinutes(start, end){
+  return Math.round((end.getTime() - start.getTime())/60000);
+}
+function computeStartFromDuration(endDate, mins){
+  return new Date(endDate.getTime() - mins*60000);
+}
+function fmtDur(mins){
+  if(mins==null) return '';
+  const h = Math.floor(mins/60), m = mins%60;
+  if(h>0 && m>0) return `${h} ชม. ${m} นาที`;
+  if(h>0) return `${h} ชม.`;
+  return `${m} นาที`;
+}
+/* รูปแบบย่อสำหรับพื้นที่แคบ เช่น แกนของกราฟ (ตัดช่องว่าง/ใช้ตัวย่อ ไม่ให้ล้นขอบ canvas) */
+function fmtDurShort(mins){
+  if(mins==null) return '';
+  const h = Math.floor(mins/60), m = mins%60;
+  if(h>0 && m>0) return `${h}ชม.${m}น.`;
+  if(h>0) return `${h}ชม.`;
+  return `${m}น.`;
+}
+function fmtHM(date){
+  return `${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
+}
+function todayStr(){
+  const d = new Date();
+  return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+}
+function dateStrOf(d){ return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
+const WEEKDAYS_TH = ['วันอาทิตย์','วันจันทร์','วันอังคาร','วันพุธ','วันพฤหัสบดี','วันศุกร์','วันเสาร์'];
+const MONTHS_TH = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+function weekdayLabel(dateStr){
+  const [y,mo,d] = dateStr.split('-').map(Number);
+  const dt = new Date(y,mo-1,d);
+  return `${WEEKDAYS_TH[dt.getDay()]} ที่ ${d} ${MONTHS_TH[mo-1]} ${y+543}`;
+}
+const DURATION_CATEGORIES = [
+  {value:'reading', label:'อ่านหนังสือ'},
+  {value:'course', label:'เรียนคอร์ส/เรียนหนังสือ'},
+  {value:'exercise', label:'ออกกำลังกาย'},
+  {value:'work', label:'ทำงาน'},
+  {value:'project', label:'ทำโปรเจกต์'},
+  {value:'other', label:'อื่น ๆ'},
+];
+const MILESTONE_CATEGORIES = [
+  {value:'wake', label:'ตื่น'},
+  {value:'sleep', label:'นอน'},
+  {value:'milestone_other', label:'อื่น ๆ (จุดเวลาสำคัญ)'},
+];
+const CATEGORY_LABEL = {};
+DURATION_CATEGORIES.concat(MILESTONE_CATEGORIES).forEach(c=>{ CATEGORY_LABEL[c.value] = c.label; });
+const CATEGORY_ORDER = ['reading','course','exercise','work','project','other'];
+/* เกณฑ์ขั้นต่ำ (จำนวนครั้งที่บันทึกสะสมทั้งหมดของ category) ก่อนจะถือว่า "สำคัญพอ" ที่จะขึ้นการ์ดสตรีค
+   ปรับตัวเลขนี้ที่เดียวจบ */
+const STREAK_MIN_COUNT = 10;
+const CATEGORY_COLORS = {
+  reading:'#4FA595', course:'#5B8DEF', exercise:'#E28A7A',
+  work:'#D9A24B', project:'#9C7FE0', other:'#9C9686',
+};
+
+/* ============================================================
+   2. DATA MODEL + FILE PERSISTENCE
+   ============================================================ */
+let appData = { version:1, days:{}, activities:[], goals:{} };
+let fileHandle = null;      // FileSystemFileHandle, when File System Access API is used
+let storageMode = null;     // 'fs' | 'local'
+let nextId = 1;
+let saveTimer = null;
+let lastKnownFileModified = null; // file.lastModified ล่าสุดที่แท็บนี้อ่าน/เขียนสำเร็จ ใช้เช็คก่อนบันทึกว่ามีแท็บ/หน้าต่างอื่นแก้ไฟล์เดียวกันไปก่อนหรือไม่ (กัน silent overwrite)
+
+function emptyData(){ return { version:1, days:{}, activities:[], runningTimer:null, goals:{} }; }
+
+const CURRENT_DATA_VERSION = 1;
+
+/* แปลงข้อมูลเก่าให้เป็น schema ปัจจุบันทีละสเต็ปตาม data.version
+   เผื่อ schema เปลี่ยนในอนาคต ให้เพิ่ม if(version<N){...; version=N;} ต่อท้ายเป็นลำดับ */
+function migrateData(data){
+  if(!data || typeof data!=='object') return emptyData();
+  let version = data.version || 0;
+  if(version < 1){
+    // ข้อมูลเก่าก่อนมี field version — โครงสร้างเดิมใช้ได้กับ v1 อยู่แล้ว แค่ประทับ version
+    version = 1;
+  }
+  data.version = CURRENT_DATA_VERSION;
+  if(!data.days) data.days = {};
+  if(!data.activities) data.activities = [];
+  if(data.runningTimer===undefined) data.runningTimer = null;
+  if(!data.goals || typeof data.goals!=='object' || Array.isArray(data.goals)) data.goals = {};
+  // ทิ้ง goal ที่โครงสร้างเพี้ยน (เช่นไฟล์ถูกแก้มือ) กัน renderStreak/renderTodayGoals พัง
+  Object.keys(data.goals).forEach(k=>{
+    const g = data.goals[k];
+    const ok = g && typeof g==='object' && typeof g.target==='number' && g.target>0 &&
+      (g.unit==='minutes' || (g.unit==='pages' && k==='reading'));
+    if(!ok) delete data.goals[k];
+  });
+  return data;
+}
+
+/* ใช้ตรวจโครงสร้าง activity ก่อน merge เข้าระบบตอน import (กัน field ขาดหาย/พังจาก key แปลก ๆ)
+   เข้มขึ้นกว่าเดิม: เช็ค type และรูปแบบ ไม่ใช่แค่ว่ามีค่าอยู่หรือไม่ กัน renderHistory/สถิติพังจาก
+   วันที่รูปแบบผิด และกัน XSS/ค่าติดลบที่หลุดมาจากไฟล์ import ที่ถูกแก้ไขมา */
+function validateActivity(a){
+  if(!a || typeof a!=='object') return false;
+  if(a.id==null || typeof a.id!=='number') return false;
+  if(!a.timelineDay || !/^\d{4}-\d{2}-\d{2}$/.test(a.timelineDay)) return false;
+  if(!a.category || typeof a.category!=='string') return false;
+  if(!a.startISO || isNaN(new Date(a.startISO).getTime())) return false;
+  if(!a.isMilestone){
+    if(!a.endISO || isNaN(new Date(a.endISO).getTime())) return false;
+    if(a.durationMinutes==null || typeof a.durationMinutes!=='number') return false;
+  }
+  if(a.pages!=null && (typeof a.pages!=='number' || a.pages<0)) return false;
+  if(a.detail!=null && typeof a.detail!=='string') return false;
+  return true;
+}
+
+/* เช็คคร่าว ๆ ว่าไฟล์ที่จะเปิดหน้าตาเหมือนไฟล์ข้อมูล Timeline หรือไม่ ก่อนจะเผลอเขียนทับไฟล์ที่ไม่เกี่ยวข้อง
+   (ไม่ validate ลึกถึงระดับ activity ทุกตัว แค่กันกรณีเปิดไฟล์ JSON คนละชนิดโดยไม่ตั้งใจ) */
+function looksLikeTimelineData(obj){
+  if(!obj || typeof obj!=='object' || Array.isArray(obj)) return false;
+  if(obj.activities!=null && !Array.isArray(obj.activities)) return false;
+  if(obj.days!=null && (typeof obj.days!=='object' || Array.isArray(obj.days))) return false;
+  return true;
+}
+
+/* ทำความสะอาดข้อมูลหลังโหลด/import/กู้คืน:
+   1) สร้าง day record ให้ทุก timelineDay ที่มีกิจกรรมอยู่แต่ไม่มี record (กัน "นับในสถิติแต่ไม่ขึ้นใน History")
+   2) ลบ day record ที่ไม่มีกิจกรรมเหลืออยู่เลยออกไป (กัน "วันว่างค้างในระบบ" ที่ทำให้ streak/เฉลี่ยต่อวันเพี้ยน) */
+function normalizeData(data){
+  data = migrateData(data);
+  data.activities.forEach(a=>{
+    if(a.timelineDay && !data.days[a.timelineDay]){
+      data.days[a.timelineDay] = { status:'open', createdAt: a.createdAt || new Date().toISOString() };
+    }
+  });
+  const daysWithActivities = new Set(data.activities.map(a=>a.timelineDay));
+  Object.keys(data.days).forEach(d=>{
+    if(!daysWithActivities.has(d)) delete data.days[d];
+  });
+  return data;
+}
+
+function ensureDay(day){
+  if(!appData.days[day]){
+    appData.days[day] = { status:'open', createdAt:new Date().toISOString() };
+  }
+  return appData.days[day];
+}
+
+function recomputeNextId(){
+  nextId = 1;
+  appData.activities.forEach(a=>{ if(a.id>=nextId) nextId=a.id+1; });
+}
+
+/* ---- IndexedDB: remember the chosen file handle across launches ---- */
+function idbOpen(){
+  return new Promise((resolve,reject)=>{
+    const req = indexedDB.open('dtm-store', 1);
+    req.onupgradeneeded = ()=>{ req.result.createObjectStore('kv'); };
+    req.onsuccess = ()=>resolve(req.result);
+    req.onerror = ()=>reject(req.error);
+  });
+}
+async function idbSet(key, val){
+  const db = await idbOpen();
+  return new Promise((resolve,reject)=>{
+    const tx = db.transaction('kv','readwrite');
+    tx.objectStore('kv').put(val, key);
+    tx.oncomplete = ()=>resolve();
+    tx.onerror = ()=>reject(tx.error);
+  });
+}
+async function idbGet(key){
+  const db = await idbOpen();
+  return new Promise((resolve,reject)=>{
+    const tx = db.transaction('kv','readonly');
+    const r = tx.objectStore('kv').get(key);
+    r.onsuccess = ()=>resolve(r.result);
+    r.onerror = ()=>reject(r.error);
+  });
+}
+
+const hasFSAccess = ('showOpenFilePicker' in window) && ('showSaveFilePicker' in window);
+
+/* ============================================================
+   3b. BACKUP: โฟลเดอร์สำรองอัตโนมัติ (File System Access API)
+   ============================================================ */
+let backupDirHandle = null;               // FileSystemDirectoryHandle
+let backupFolderPermState = 'unset';      // 'unset' | 'connected' | 'disconnected'
+let lastFolderBackupAt = null;
+const BACKUP_KEEP_COUNT = 30;
+const hasDirAccess = 'showDirectoryPicker' in window;
+
+async function writeToFileHandle(handle, dataObj){
+  const writable = await handle.createWritable();
+  await writable.write(JSON.stringify(dataObj, null, 2));
+  await writable.close();
+}
+async function readFromFileHandle(handle){
+  const file = await handle.getFile();
+  const text = await file.text();
+  if(!text.trim()) return emptyData();
+  return migrateData(JSON.parse(text));
+}
+
+let hasPendingSave = false; // true ตั้งแต่มีการแก้ไขที่ยังไม่ save สำเร็จ จนกว่า doSave() จะรันสำเร็จจริง (ไม่เคลียร์ตอนพัง กันปิดแท็บเงียบๆ)
+let saveInFlight = false;   // true ระหว่างที่ doSave() กำลังทำงานอยู่ กัน doSave ซ้อนกันถ้าเขียนไฟล์ช้า
+let saveAgainNeeded = false; // มีการแก้ไขเพิ่มเข้ามาระหว่างที่ doSave() เดิมยังไม่เสร็จ ให้ต่อคิว save รอบใหม่
+
+/* Backup เก็บใน IndexedDB (ไม่ใช่ localStorage) เพราะ quota ใหญ่กว่ามาก — localStorage มักจำกัดแค่ ~5MB
+   ซึ่งอาจเต็มได้ภายในเวลาไม่นานถ้าบันทึกกิจกรรมทุกวัน หมุนตามวันในสัปดาห์ (7 slot) กันเคส backup ตัวเดียว
+   โดนเขียนทับตอนข้อมูลพังไปแล้วหลายวันโดยไม่รู้ตัว */
+function backupSlotKey(){ return `dtm_backup_slot_${new Date().getDay()}`; }
+
+async function writeLocalBackup(){
+  try{
+    await idbSet(backupSlotKey(), { savedAt:new Date().toISOString(), data:appData });
+    return true;
+  }catch(e){
+    console.warn('backup write failed', e);
+    return false;
+  }
+}
+
+async function getAllLocalBackups(){
+  const list = [];
+  for(let i=0;i<7;i++){
+    try{
+      const rec = await idbGet(`dtm_backup_slot_${i}`);
+      if(rec && rec.data && rec.savedAt) list.push(rec);
+    }catch(e){ /* ข้าม slot ที่อ่านไม่ได้ */ }
+  }
+  // เผื่อยังมี backup รูปแบบเก่าใน localStorage (ก่อนย้ายมา IndexedDB) ค้างอยู่ ใช้เป็นตัวเลือกสำรองท้ายสุด
+  for(let i=0;i<7;i++){
+    const raw = localStorage.getItem(`dtm_data_backup_${i}`);
+    if(!raw) continue;
+    try{
+      const parsed = JSON.parse(raw);
+      if(parsed && parsed.data && parsed.savedAt) list.push(parsed);
+    }catch(e){ /* ข้าม backup เก่าที่อ่านไม่ได้ */ }
+  }
+  const legacyRaw = localStorage.getItem('dtm_data_backup');
+  if(legacyRaw){
+    try{
+      const legacy = JSON.parse(legacyRaw);
+      if(legacy && Array.isArray(legacy.activities)) list.push({ savedAt:null, data:legacy });
+    }catch(e){ /* ข้าม backup เก่าที่อ่านไม่ได้ */ }
+  }
+  list.sort((a,b)=>{
+    if(!a.savedAt) return 1;
+    if(!b.savedAt) return -1;
+    return new Date(b.savedAt) - new Date(a.savedAt);
+  });
+  return list;
+}
+
+/* ---- โฟลเดอร์สำรองอัตโนมัติ ---- */
+
+function backupTimestamp(){
+  const d = new Date();
+  return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}_${pad2(d.getHours())}-${pad2(d.getMinutes())}-${pad2(d.getSeconds())}`;
+}
+
+async function writeFolderBackup(){
+  if(!backupDirHandle || backupFolderPermState!=='connected') return;
+  try{
+    if((await backupDirHandle.queryPermission({mode:'readwrite'})) !== 'granted'){
+      // permission หลุดระหว่างเซสชัน (เช่นถูกถอนสิทธิ์จากเบราว์เซอร์) — อัปเดต UI ให้กดเชื่อมต่อใหม่
+      backupFolderPermState = 'disconnected';
+      renderBackupFolderUI();
+      return;
+    }
+    const fh = await backupDirHandle.getFileHandle(`dtm-backup_${backupTimestamp()}.json`, {create:true});
+    const w = await fh.createWritable();
+    await w.write(JSON.stringify(appData, null, 2));
+    await w.close();
+    await pruneFolderBackups();
+    lastFolderBackupAt = new Date();
+    renderBackupFolderUI();
+  }catch(e){
+    console.warn('folder backup failed', e); // เงียบเสมอ ไม่บล็อก save หลัก
+  }
+}
+
+async function pruneFolderBackups(){
+  const names = [];
+  for await (const [name, h] of backupDirHandle.entries()){
+    if(h.kind==='file' && /^dtm-backup_.*\.json$/.test(name)) names.push(name);
+  }
+  names.sort(); // ชื่อไฟล์ฝัง timestamp แบบ sortable อยู่แล้ว
+  for(let i=0;i<names.length-BACKUP_KEEP_COUNT;i++){
+    await backupDirHandle.removeEntry(names[i]);
+  }
+}
+
+function renderBackupFolderUI(){
+  const block = document.getElementById('backupFolderBlock');
+  if(!hasDirAccess){ block.style.display='none'; return; }
+  block.style.display='flex';
+
+  const statusEl = document.getElementById('backupFolderStatus');
+  const btnSet = document.getElementById('btnSetBackupFolder');
+  const btnReconnect = document.getElementById('btnReconnectBackupFolder');
+
+  if(backupFolderPermState==='connected' && backupDirHandle){
+    statusEl.style.display='block';
+    btnSet.style.display='none';
+    btnReconnect.style.display='none';
+    document.getElementById('backupFolderName').textContent =
+      'สำรองอัตโนมัติ: ' + (backupDirHandle.name || 'โฟลเดอร์ที่เลือกไว้');
+    document.getElementById('backupFolderTime').textContent = lastFolderBackupAt
+      ? ('บันทึกล่าสุด ' + pad2(lastFolderBackupAt.getHours())+':'+pad2(lastFolderBackupAt.getMinutes())+':'+pad2(lastFolderBackupAt.getSeconds()))
+      : 'ยังไม่เคยสำรองในเซสชันนี้';
+  } else if(backupFolderPermState==='disconnected'){
+    statusEl.style.display='none';
+    btnSet.style.display='none';
+    btnReconnect.style.display='block';
+  } else {
+    statusEl.style.display='none';
+    btnSet.style.display='block';
+    btnReconnect.style.display='none';
+  }
+}
+
+/* เช็คสถานะโฟลเดอร์สำรองครั้งเดียวตอนเข้าแอป — ใช้ queryPermission เท่านั้น (ห้าม requestPermission
+   ตรงนี้ เพราะตอนโหลดหน้าไม่มี user gesture จะไม่สำเร็จ) ถ้าไม่ granted ให้โชว์ปุ่มกดเชื่อมต่อเอง */
+async function initBackupFolder(){
+  if(!hasDirAccess){ renderBackupFolderUI(); return; }
+  try{
+    const handle = await idbGet('backupDirHandle');
+    if(!handle){
+      backupFolderPermState = 'unset';
+      renderBackupFolderUI();
+      return;
+    }
+    backupDirHandle = handle;
+    const perm = await handle.queryPermission({mode:'readwrite'});
+    backupFolderPermState = (perm==='granted') ? 'connected' : 'disconnected';
+  }catch(e){
+    console.warn('backup folder init failed', e);
+    backupFolderPermState = 'unset';
+  }
+  renderBackupFolderUI();
+}
+
+function scheduleSave(){
+  setFileStatus('saving');
+  hasPendingSave = true;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(triggerSave, 300);
+}
+
+/* คิว save ทีละงาน กัน doSave() สองรอบทำงานซ้อนกันถ้าการเขียนไฟล์ช้ากว่า 300ms (เช่นโฟลเดอร์ที่ sync กับคลาวด์)
+   ซึ่งเดิมทำให้ lastKnownFileModified ผิดจังหวะและเด้ง confirm "ไฟล์ถูกแก้จากที่อื่น" ปลอมได้ */
+async function triggerSave(){
+  if(saveInFlight){ saveAgainNeeded = true; return; }
+  saveInFlight = true;
+  await doSave();
+  saveInFlight = false;
+  if(saveAgainNeeded){
+    saveAgainNeeded = false;
+    triggerSave();
+  }
+}
+
+async function doSave(){
+  // เขียน backup ไว้ก่อนเสมอ (แม้ตอน storageMode==='fs') ไม่ว่าการเขียนไฟล์จริงจะสำเร็จหรือไม่
+  const backupOk = await writeLocalBackup();
+  await writeFolderBackup();
+
+  try{
+    if(storageMode==='fs' && fileHandle){
+      /* กันเคสเปิดไฟล์เดียวกันไว้หลายแท็บพร้อมกัน: เทียบ lastModified ของไฟล์บนดิสก์ตอนนี้กับค่าที่
+         แท็บนี้อ่าน/เขียนล่าสุด ถ้าไม่ตรงกันแปลว่ามีที่อื่นเขียนทับไปแล้วหลังจากนั้น — เตือนก่อนทับต่อ
+         แทนที่จะ save ทับแบบเงียบๆ (ไม่ merge อัตโนมัติ เพราะเสี่ยงข้อมูลปนกันมากกว่าจะช่วย) */
+      if(lastKnownFileModified!=null){
+        let currentFile = null;
+        try{ currentFile = await fileHandle.getFile(); }catch(e){ /* อ่านสถานะไฟล์ไม่ได้ ปล่อยให้ writeToFileHandle ด้านล่างจัดการ error เอง */ }
+        if(currentFile && currentFile.lastModified !== lastKnownFileModified){
+          const proceed = confirm('ไฟล์นี้ถูกแก้ไขจากที่อื่น (เช่น อีกแท็บ/หน้าต่างที่เปิดไฟล์เดียวกันไว้) หลังจากที่เปิดไว้ในแท็บนี้\nถ้าบันทึกต่อ การแก้ไขจากที่อื่นจะถูกทับด้วยข้อมูลของแท็บนี้ทันที\n\nกด "ตกลง" เพื่อบันทึกทับต่อไป\nกด "ยกเลิก" เพื่องดบันทึกครั้งนี้ (แนะนำ: ปิดแท็บนี้แล้วไปใช้งานต่อในแท็บอื่นแทน)');
+          if(!proceed){
+            setFileStatus('error', 'งดบันทึกเนื่องจากไฟล์ถูกแก้ไขจากที่อื่น — ปิดแท็บนี้แล้วใช้แท็บอื่น หรือ Export JSON เก็บงานจากแท็บนี้ไว้ก่อนตัดสินใจ');
+            return; // hasPendingSave ยังเป็น true ต่อไป เพราะยังไม่ได้บันทึกจริง
+          }
+        }
+      }
+      await writeToFileHandle(fileHandle, appData);
+      lastKnownFileModified = (await fileHandle.getFile()).lastModified;
+    } else if(storageMode==='local'){
+      localStorage.setItem('dtm_data', JSON.stringify(appData));
+    }
+    setFileStatus('saved');
+    hasPendingSave = false; // เคลียร์ก็ต่อเมื่อบันทึกสำเร็จจริงเท่านั้น
+  }catch(e){
+    console.error(e);
+    const backupNote = backupOk
+      ? ' — มีสำเนาสำรองไว้ใน browser แล้ว กด "กู้คืนจาก Backup" ได้ถ้าจำเป็น'
+      : ' — และสำรองข้อมูลใน browser ก็ไม่สำเร็จด้วย แนะนำให้ Export JSON เก็บไว้ทันที';
+    setFileStatus('error', e.message + backupNote);
+    // hasPendingSave ไม่ถูกเคลียร์ตรงนี้ — ยังถือว่ามีการแก้ไขที่ยังไม่ได้บันทึกจริง กัน beforeunload ปิดแท็บแบบไม่เตือน
+  }
+}
+
+function setFileStatus(state, extra){
+  const el = document.getElementById('fileStatus');
+  const now = new Date();
+  const t = pad2(now.getHours())+':'+pad2(now.getMinutes())+':'+pad2(now.getSeconds());
+  if(state==='saving'){
+    el.innerHTML = '<b>ไฟล์ข้อมูล</b>กำลังบันทึก…';
+  } else if(state==='saved'){
+    const nameLabel = storageMode==='fs' ? (fileHandle.name||'timeline-data.json') : 'Browser storage (local)';
+    el.innerHTML = `<b>${escapeHtml(nameLabel)}</b>บันทึกล่าสุด ${t}`;
+  } else if(state==='error'){
+    el.innerHTML = `<b style="color:var(--danger)">บันทึกไม่สำเร็จ</b>${escapeHtml(extra||'')}`;
+  }
+}
+
+/* ============================================================
+   3. STARTUP FLOW
+   ============================================================ */
+const startupEl = document.getElementById('startup');
+const sidebarEl = document.getElementById('sidebar');
+const mainAreaEl = document.getElementById('mainArea');
+
+async function tryAutoReconnect(){
+  if(!hasFSAccess) return false;
+  try{
+    const handle = await idbGet('fileHandle');
+    if(!handle) return false;
+    let perm = await handle.queryPermission({mode:'readwrite'});
+    if(perm !== 'granted'){
+      perm = await handle.requestPermission({mode:'readwrite'});
+    }
+    if(perm !== 'granted') return false;
+    appData = normalizeData(await readFromFileHandle(handle));
+    fileHandle = handle;
+    storageMode = 'fs';
+    lastKnownFileModified = (await handle.getFile()).lastModified;
+    return true;
+  }catch(e){
+    console.warn('auto reconnect failed', e);
+    return false;
+  }
+}
+
+async function bootApp(opts){
+  opts = opts || {};
+  if(!opts.skipReconnect){
+    const reconnected = await tryAutoReconnect();
+    if(reconnected){ enterApp(); return; }
+  }
+
+  const btnReconnect = document.getElementById('btnReconnectLast');
+  if(hasFSAccess){
+    document.getElementById('startupActionsFS').style.display='flex';
+    document.getElementById('startupActionsFallback').style.display='none';
+    document.getElementById('startupNote').textContent =
+      'แนะนำให้ใช้ Microsoft Edge หรือ Google Chrome บน Windows 11 เพื่อให้บันทึกลงไฟล์จริงในเครื่องได้โดยตรง';
+    // tryAutoReconnect มักไม่สำเร็จหลังรีสตาร์ทเบราว์เซอร์ เพราะ requestPermission() ตอนโหลดหน้าไม่มี user gesture
+    // เลยขึ้นปุ่มให้กดต่อไฟล์เดิมเอง (มี gesture จากการคลิก) แทนที่จะบังคับเลือกไฟล์ใหม่ทุกครั้ง
+    try{
+      const handle = await idbGet('fileHandle');
+      if(handle){
+        btnReconnect.style.display = 'inline-flex';
+        btnReconnect.textContent = `🔗 ต่อไฟล์ล่าสุด: ${handle.name||'timeline-data.json'}`;
+      } else {
+        btnReconnect.style.display = 'none';
+      }
+    }catch(e){ btnReconnect.style.display = 'none'; }
+  } else {
+    document.getElementById('startupActionsFS').style.display='none';
+    document.getElementById('startupActionsFallback').style.display='flex';
+    document.getElementById('startupNote').textContent =
+      'เบราว์เซอร์นี้ไม่รองรับการเขียนไฟล์โดยตรง ระบบจะบันทึกข้อมูลไว้ใน browser storage แทน — ใช้ปุ่ม "Export JSON" เป็นประจำเพื่อสำรองข้อมูลเป็นไฟล์จริง (แนะนำให้เปิดด้วย Edge/Chrome เพื่อประสบการณ์เต็มรูปแบบ)';
+  }
+}
+
+document.getElementById('btnReconnectLast').addEventListener('click', async ()=>{
+  try{
+    const handle = await idbGet('fileHandle');
+    if(!handle){ alert('ไม่พบไฟล์ล่าสุดที่เคยเชื่อมไว้'); return; }
+    const perm = await handle.requestPermission({mode:'readwrite'});
+    if(perm!=='granted'){ alert('ไม่ได้รับสิทธิ์เข้าถึงไฟล์ ลองเลือกไฟล์ใหม่แทน'); return; }
+    appData = normalizeData(await readFromFileHandle(handle));
+    fileHandle = handle;
+    storageMode = 'fs';
+    lastKnownFileModified = (await handle.getFile()).lastModified;
+    enterApp();
+  }catch(e){
+    console.error(e);
+    alert('เชื่อมไฟล์ล่าสุดไม่สำเร็จ: '+(e.message||'ไม่ทราบสาเหตุ')+'\nไฟล์อาจถูกย้ายหรือลบไปแล้ว ลองเลือกไฟล์ใหม่แทน');
+  }
+});
+
+document.getElementById('btnOpenFile').addEventListener('click', async ()=>{
+  try{
+    const [handle] = await window.showOpenFilePicker({
+      types:[{description:'Timeline data', accept:{'application/json':['.json']}}]
+    });
+    const perm = await handle.requestPermission({mode:'readwrite'});
+    if(perm!=='granted') return;
+    const file = await handle.getFile();
+    const text = await file.text();
+    let parsed = null;
+    if(text.trim()){
+      try{ parsed = JSON.parse(text); }
+      catch(e){
+        alert('ไฟล์นี้ไม่ใช่ JSON ที่ถูกต้อง เปิดไม่สำเร็จ (จะไม่มีการเขียนทับไฟล์นี้)');
+        return;
+      }
+    }
+    // เช็คว่าไฟล์นี้หน้าตาเหมือนไฟล์ข้อมูล Timeline หรือไม่ ก่อนใช้งานจริง กันเผลอเปิด JSON คนละชนิด
+    // แล้วระบบเขียนทับกลายเป็นข้อมูลเปล่าโดยไม่รู้ตัว (เดิมจะเงียบและกลายเป็น emptyData() ทันที)
+    if(parsed!=null && !looksLikeTimelineData(parsed)){
+      const proceed = confirm('ไฟล์นี้ดูไม่เหมือนไฟล์ข้อมูล Timeline (ไม่มีโครงสร้าง days/activities ที่คาดไว้)\nถ้ากด "ตกลง" ระบบจะเริ่มข้อมูลใหม่ และจะเขียนทับเนื้อหาไฟล์นี้เมื่อมีการบันทึกครั้งถัดไป\nต้องการดำเนินการต่อหรือไม่?');
+      if(!proceed) return;
+      parsed = null;
+    }
+    appData = normalizeData(parsed ? migrateData(parsed) : emptyData());
+    fileHandle = handle;
+    storageMode = 'fs';
+    lastKnownFileModified = file.lastModified;
+    await idbSet('fileHandle', handle);
+    enterApp();
+  }catch(e){
+    if(e.name!=='AbortError'){
+      console.error(e);
+      alert('เปิดไฟล์ไม่สำเร็จ: ' + (e.message||'ไม่ทราบสาเหตุ') + '\nไฟล์อาจเสียหายหรือไม่มีสิทธิ์เข้าถึง');
+    }
+  }
+});
+
+document.getElementById('btnNewFile').addEventListener('click', async ()=>{
+  try{
+    const handle = await window.showSaveFilePicker({
+      suggestedName:'timeline-data.json',
+      types:[{description:'Timeline data', accept:{'application/json':['.json']}}]
+    });
+    appData = emptyData();
+    await writeToFileHandle(handle, appData);
+    fileHandle = handle;
+    storageMode = 'fs';
+    lastKnownFileModified = (await handle.getFile()).lastModified;
+    await idbSet('fileHandle', handle);
+    enterApp();
+  }catch(e){
+    if(e.name!=='AbortError'){
+      console.error(e);
+      alert('สร้างไฟล์ใหม่ไม่สำเร็จ: ' + (e.message||'ไม่ทราบสาเหตุ') + '\nลองเลือกตำแหน่ง/ชื่อไฟล์อื่น หรือตรวจสอบสิทธิ์การเขียนไฟล์ในเครื่อง');
+    }
+  }
+});
+
+document.getElementById('btnUseLocal').addEventListener('click', ()=>{
+  const saved = localStorage.getItem('dtm_data');
+  if(saved){
+    try{ appData = normalizeData(migrateData(JSON.parse(saved))); }
+    catch(e){
+      alert('ข้อมูลเดิมใน browser storage เสียหาย อ่านไม่ได้ ระบบจะเริ่มข้อมูลใหม่แทน\n(ข้อมูลเดิมยังไม่ถูกลบ จะถูกเขียนทับก็ต่อเมื่อมีการบันทึกครั้งถัดไปเท่านั้น)');
+      appData = emptyData();
+    }
+  } else {
+    appData = emptyData();
+  }
+  storageMode = 'local';
+  enterApp();
+});
+
+document.getElementById('btnSwitchFile').addEventListener('click', async ()=>{
+  // เดิม: bootApp() เรียก tryAutoReconnect() ซึ่งเปิด handle ไฟล์เดิมกลับมาทันที (permission ยัง granted อยู่)
+  // ทำให้ปุ่มนี้ใช้ไม่ได้จริง และยังทิ้งการแก้ไขที่รอ debounce (300ms) ไว้ไม่ได้ flush ก่อนสลับไฟล์
+  clearTimeout(saveTimer);
+  if(hasPendingSave){ await triggerSave(); }
+  startupEl.style.display='flex';
+  sidebarEl.style.display='none';
+  mainAreaEl.style.display='none';
+  bootApp({skipReconnect:true});
+});
+
+function enterApp(){
+  recomputeNextId();
+  startupEl.style.display='none';
+  sidebarEl.style.display='flex';
+  mainAreaEl.style.display='block';
+  setFileStatus('saved');
+  initUI();
+  initBackupFolder();
+}
+
+/* ============================================================
+   4. NAVIGATION
+   ============================================================ */
+document.querySelectorAll('.nav button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    document.getElementById('view-'+btn.dataset.view).classList.add('active');
+    if(btn.dataset.view==='history') renderHistory();
+    if(btn.dataset.view==='stats') renderStats();
+  });
+});
+
+/* ============================================================
+   5. TODAY VIEW
+   ============================================================ */
+/* "วันนี้" ตามปฏิทิน (todayStr) ขัดกับแนวคิด Timeline Day ของแอปเอง — ถ้ายังไม่นอน (ตี 1 ยังไม่เข้านอน)
+   ปฏิทินข้ามไปวันใหม่แล้ว แต่ผู้ใช้ยังถือว่าเป็น Timeline Day เดิม จึงเดาว่า "วันนี้" ที่ควรเปิดให้ควร
+   เป็นเมื่อวาน ถ้า: ก) ตอนนี้ยังก่อน ~06:00, ข) วันของเมื่อวานยัง open (ยังไม่จบ), และ ค) ยังไม่มี
+   milestone "ตื่น" ของวันปฏิทินวันนี้ (ถ้ามีแล้วแปลว่าเริ่ม Timeline Day ใหม่จริง ๆ) */
+function effectiveTodayStr(){
+  const now = new Date();
+  const calToday = todayStr();
+  if(now.getHours() < 6){
+    const y = addDaysToDateStr(calToday, -1);
+    const info = appData.days[y];
+    const hasWakeToday = appData.activities.some(a=>a.timelineDay===calToday && a.isMilestone && a.category==='wake');
+    if(info && info.status!=='completed' && !hasWakeToday){
+      return y;
+    }
+  }
+  return calToday;
+}
+
+let currentDay = todayStr();
+
+function initUI(){
+  currentDay = effectiveTodayStr();
+  document.getElementById('dayPicker').value = currentDay;
+  renderToday();
+}
+
+document.getElementById('dayPicker').addEventListener('change', (e)=>{
+  currentDay = e.target.value || todayStr();
+  renderToday();
+});
+document.getElementById('btnPrevDay').addEventListener('click', ()=>{
+  currentDay = addDaysToDateStr(currentDay, -1);
+  document.getElementById('dayPicker').value = currentDay;
+  renderToday();
+});
+document.getElementById('btnNextDay').addEventListener('click', ()=>{
+  currentDay = addDaysToDateStr(currentDay, 1);
+  document.getElementById('dayPicker').value = currentDay;
+  renderToday();
+});
+document.getElementById('btnToday').addEventListener('click', ()=>{
+  currentDay = effectiveTodayStr();
+  document.getElementById('dayPicker').value = currentDay;
+  renderToday();
+});
+
+function getActivitiesForDay(day){
+  // startISO เป็นสตริง ISO 8601 มาตรฐาน เทียบด้วย string compare ได้ผลลัพธ์เรียงตามเวลาจริงเหมือนกัน
+  // แต่เร็วกว่ามาก เพราะไม่ต้องสร้าง Date object 2 ตัวต่อคู่เปรียบเทียบทุกครั้งที่ sort (เดิมช้าเมื่อข้อมูลเยอะ)
+  return appData.activities
+    .filter(a=>a.timelineDay===day)
+    .sort((a,b)=> a.startISO < b.startISO ? -1 : (a.startISO > b.startISO ? 1 : 0));
+}
+
+function renderToday(){
+  updateTimerUI();
+  renderTodayGoals();
+  renderQuickChips();
+  document.getElementById('weekdayLabel').textContent = weekdayLabel(currentDay);
+  const dayInfo = appData.days[currentDay];
+  const pill = document.getElementById('dayStatusPill');
+  if(!dayInfo){
+    pill.textContent = 'ยังไม่มีข้อมูล';
+    pill.className = 'pill open';
+  } else if(dayInfo.status==='completed'){
+    pill.textContent = 'จบวันแล้ว';
+    pill.className = 'pill completed';
+  } else {
+    pill.textContent = 'กำลังดำเนินอยู่';
+    pill.className = 'pill open';
+  }
+  document.getElementById('btnCloseDay').textContent = (dayInfo && dayInfo.status==='completed') ? '↺ เปิด Timeline วันนี้อีกครั้ง' : '✓ จบ Timeline วันนี้';
+
+  const list = getActivitiesForDay(currentDay);
+  const ledger = document.getElementById('ledger');
+  if(list.length===0){
+    ledger.innerHTML = `<div class="empty"><div class="big">ยังไม่มีกิจกรรมในวันนี้</div>กด "เพิ่มกิจกรรม" เพื่อเริ่มบันทึก</div>`;
+    return;
+  }
+  ledger.innerHTML = list.map(a=>{
+    const s = new Date(a.startISO);
+    let timeHtml;
+    if(a.isMilestone){
+      const cls = a.startPrecision!=='exact' ? 'approx' : '';
+      const title = a.startPrecision!=='exact' ? ' title="เวลาโดยประมาณ"' : '';
+      timeHtml = `<span class="${cls}"${title}>${fmtHM(s)}</span>`;
+    } else {
+      const e = new Date(a.endISO);
+      const sCls = a.startPrecision!=='exact' ? 'approx' : '';
+      const eCls = a.endPrecision!=='exact' ? 'approx' : '';
+      const sTitle = a.startPrecision!=='exact' ? ' title="เวลาโดยประมาณ"' : '';
+      const eTitle = a.endPrecision!=='exact' ? ' title="เวลาโดยประมาณ"' : '';
+      timeHtml = `<span class="${sCls}"${sTitle}>${fmtHM(s)}</span> – <span class="${eCls}"${eTitle}>${fmtHM(e)}</span><span class="dur">${fmtDur(a.durationMinutes)}</span>`;
+    }
+    const catLabel = CATEGORY_LABEL[a.category] || a.category || 'ไม่ระบุหมวดหมู่';
+    const catColor = CATEGORY_COLORS[a.category] || '#8B939C';
+    const pagesHtml = a.pages ? ` · ${a.pages} หน้า` : '';
+    return `
+    <div class="entry" data-id="${a.id}" style="--cat-color:${catColor}">
+      <div class="time">${timeHtml}</div>
+      <div class="body">
+        <span class="name">${escapeHtml(catLabel)}</span>
+        ${(a.detail||a.pages) ? `<div class="detail">${escapeHtml(a.detail||'')}${pagesHtml}</div>` : ''}
+      </div>
+      <div class="actions">
+        <button class="iconbtn" data-act="dup" title="ทำซ้ำ" aria-label="ทำซ้ำกิจกรรมนี้">⧉</button>
+        <button class="iconbtn" data-act="edit" title="แก้ไข" aria-label="แก้ไขกิจกรรมนี้">✎</button>
+        <button class="iconbtn" data-act="del" title="ลบ" aria-label="ลบกิจกรรมนี้">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  ledger.querySelectorAll('.entry').forEach(row=>{
+    const id = parseInt(row.dataset.id,10);
+    row.querySelector('[data-act="edit"]').addEventListener('click', ()=>openModal(id));
+    row.querySelector('[data-act="del"]').addEventListener('click', ()=>deleteActivity(id));
+    row.querySelector('[data-act="dup"]').addEventListener('click', ()=>{
+      const a = appData.activities.find(x=>x.id===id);
+      if(!a) return;
+      openModal(null, { category:a.category, pages:a.pages, detail:a.detail, isMilestone:a.isMilestone });
+    });
+  });
+}
+
+/* ความคืบหน้าของ "วันนี้จริงๆ" (effectiveTodayStr) เทียบกับเป้าที่ตั้งไว้ — ไม่อิงวันที่กำลังดูอยู่ (currentDay)
+   เพราะจุดประสงค์คือเช็คสถานะวันนี้ทันทีที่เปิดแอป ไม่ใช่เช็คของวันที่เลื่อนไปดูย้อนหลัง */
+function getTodayProgress(category){
+  const goal = appData.goals[category];
+  if(!goal) return null;
+  const day = effectiveTodayStr();
+  let amount = 0;
+  appData.activities.forEach(a=>{
+    if(a.category!==category || a.isMilestone || a.timelineDay!==day) return;
+    amount += goal.unit==='pages' ? (a.pages||0) : (a.durationMinutes||0);
+  });
+  const target = goal.target;
+  const pct = target>0 ? Math.min(100, Math.round(amount/target*100)) : 0;
+  return { amount, target, unit: goal.unit, pct };
+}
+
+function renderTodayGoals(){
+  const box = document.getElementById('todayGoals');
+  const rows = CATEGORY_ORDER.map(cat=>{
+    const progress = getTodayProgress(cat);
+    if(!progress) return '';
+    const color = CATEGORY_COLORS[cat] || '#8B939C';
+    const unitLabel = progress.unit==='pages' ? 'หน้า' : 'นาที';
+    const met = progress.pct>=100;
+    return `<div class="today-goal-row${met ? ' met':''}">
+      <div class="today-goal-head">
+        <span class="today-goal-name"><span class="cat-dot" style="background:${color}"></span>${CATEGORY_LABEL[cat]}วันนี้</span>
+        <span class="today-goal-value">${progress.amount.toLocaleString('th-TH')}/${progress.target.toLocaleString('th-TH')} ${unitLabel}${met ? ' ✓' : ''}</span>
+      </div>
+      <div class="today-goal-track"><div class="today-goal-fill" style="width:${progress.pct}%;background:${color}"></div></div>
+    </div>`;
+  }).join('');
+  box.innerHTML = rows;
+  box.style.display = rows ? 'flex' : 'none';
+}
+
+function escapeHtml(s){
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+document.getElementById('btnCloseDay').addEventListener('click', ()=>{
+  const existingInfo = appData.days[currentDay];
+  const isCurrentlyCompleted = existingInfo && existingInfo.status==='completed';
+  if(!isCurrentlyCompleted && getActivitiesForDay(currentDay).length===0){
+    showToast('ต้องมีอย่างน้อย 1 กิจกรรมก่อนจะจบ Timeline วันนี้ได้');
+    return;
+  }
+  const info = ensureDay(currentDay);
+  info.status = isCurrentlyCompleted ? 'open' : 'completed';
+  info.completedAt = info.status==='completed' ? new Date().toISOString() : null;
+  scheduleSave();
+  renderToday();
+  showToast(info.status==='completed' ? 'จบ Timeline วันนี้แล้ว' : 'เปิด Timeline วันนี้อีกครั้ง');
+});
+
+function deleteActivity(id){
+  const a = appData.activities.find(x=>x.id===id);
+  if(!a) return;
+  const day = a.timelineDay;
+  const dayInfoSnapshot = appData.days[day] ? Object.assign({}, appData.days[day]) : null;
+  // ถ้านี่คือกิจกรรมสุดท้ายของวันที่ "จบ Timeline" ไปแล้ว การลบจะทำให้ day record (รวมสถานะ completed) ถูกลบทิ้ง
+  // ไปด้วยทันที เหลือแค่ toast undo 5 วิ ถ้ากดไม่ทันจะเสียสถานะ "จบวัน" แบบเงียบๆ จึงขอ confirm เพิ่มเฉพาะเคสนี้
+  const isLastOfCompletedDay = dayInfoSnapshot && dayInfoSnapshot.status==='completed' && getActivitiesForDay(day).length===1;
+  if(isLastOfCompletedDay && !confirm('นี่คือกิจกรรมสุดท้ายของวันที่ "จบ Timeline" แล้ว การลบจะทำให้สถานะ "จบวัน" ของวันนี้หายไปด้วย ต้องการดำเนินการต่อหรือไม่?')) return;
+  appData.activities = appData.activities.filter(x=>x.id!==id);
+  // ถ้าลบกิจกรรมสุดท้ายของวันนี้ไปแล้ว ให้ลบ day record ทิ้งด้วย ไม่งั้นจะเป็นวันว่างค้างในระบบ
+  // ทำให้ streak / "เฉลี่ยต่อวัน" นับวันที่ไม่มีข้อมูลจริงรวมเข้าไปด้วย
+  const dayNowEmpty = getActivitiesForDay(day).length===0;
+  if(dayNowEmpty) delete appData.days[day];
+  scheduleSave();
+  renderToday();
+  showToast(`ลบ "${CATEGORY_LABEL[a.category]||a.category}" แล้ว`, 'เลิกทำ', ()=>{
+    appData.activities.push(a);
+    if(dayNowEmpty && dayInfoSnapshot) appData.days[day] = dayInfoSnapshot;
+    scheduleSave();
+    renderToday(); renderHistory(); renderStats();
+    showToast('เลิกทำการลบแล้ว');
+  });
+}
+
+function deleteDay(day){
+  const removed = appData.activities.filter(a=>a.timelineDay===day);
+  const count = removed.length;
+  if(count===0) return;
+  const dayInfoSnapshot = appData.days[day] ? Object.assign({}, appData.days[day]) : null;
+  appData.activities = appData.activities.filter(a=>a.timelineDay!==day);
+  delete appData.days[day];
+  scheduleSave();
+  renderToday(); renderHistory(); renderStats();
+  showToast(`ลบข้อมูลวันนี้แล้ว (${count} กิจกรรม)`, 'เลิกทำ', ()=>{
+    appData.activities = appData.activities.concat(removed);
+    if(dayInfoSnapshot) appData.days[day] = dayInfoSnapshot;
+    scheduleSave();
+    renderToday(); renderHistory(); renderStats();
+    showToast('เลิกทำการลบแล้ว');
+  });
+}
+document.getElementById('btnDeleteDay').addEventListener('click', ()=>{ deleteDay(currentDay); });
+
+/* ============================================================
+   6. ADD / EDIT MODAL
+   ============================================================ */
+const overlay = document.getElementById('modalOverlay');
+let editingId = null;
+let modalType = 'duration';
+let modalSnapshot = null; // JSON ของค่าฟอร์มตอนเปิด modal ใช้เทียบตอนจะปิดจาก overlay click
+// true เมื่อ modal ถูกเปิดจากเคสที่ข้อมูลถูกล้าง/save ไปแล้วก่อนเปิด modal (เช่น หยุดจับเวลา) — บังคับให้ต้อง
+// confirm ก่อนปิดเสมอ ไม่ว่าฟอร์มจะถูกแก้ไขหรือไม่ เพราะเทียบกับ modalSnapshot อย่างเดียวไม่พอ (ค่าที่ auto-fill
+// มาแล้วจะเทียบว่า "ไม่มีการเปลี่ยนแปลง" ทั้งที่ปิดโดยไม่บันทึกจะทำให้เวลาที่จับไว้หายถาวร)
+let forceConfirmOnClose = false;
+
+/* อ่านค่าฟอร์มทั้งหมดในโมดัลปัจจุบัน ใช้เทียบว่ามีการแก้ไขที่ยังไม่บันทึกหรือไม่ */
+function captureFormValues(){
+  return {
+    modalType,
+    timelineDay: document.getElementById('fTimelineDay').value,
+    category: document.getElementById('fCategory').value,
+    pages: document.getElementById('fPages').value,
+    detail: document.getElementById('fDetail').value,
+    startH: document.getElementById('fStartTimeH').value,
+    startM: document.getElementById('fStartTimeM').value,
+    startPrecision: document.getElementById('fStartPrecision').value,
+    startCross: document.getElementById('fStartCross').checked,
+    endH: document.getElementById('fEndTimeH').value,
+    endM: document.getElementById('fEndTimeM').value,
+    endPrecision: document.getElementById('fEndPrecision').value,
+    useReverse: document.getElementById('fUseReverse').checked,
+    durHours: document.getElementById('fDurHours').value,
+    durMins: document.getElementById('fDurMins').value,
+  };
+}
+
+document.getElementById('btnAddActivity').addEventListener('click', ()=>openModal(null));
+
+/* ปุ่ม ▶ เริ่มตอนนี้ / ⏹ หยุด — ลดแรงเสียดทานจากการต้องเลือก dropdown 4 ตัวทุกครั้งที่จะบันทึกกิจกรรม
+   เก็บสถานะจับเวลาไว้ใน appData.runningTimer เอง (ไม่ใช่ localStorage แยก) เพื่อให้ save/backup/sync ไปด้วยกัน
+   และยังอยู่รอดข้ามการรีโหลดหน้าได้ */
+let timerTickInterval = null;
+document.getElementById('quickTimerCategory').innerHTML = DURATION_CATEGORIES.map(c=>`<option value="${c.value}">${c.label}</option>`).join('');
+
+function updateTimerUI(){
+  const timer = appData.runningTimer;
+  clearInterval(timerTickInterval);
+  if(!timer){
+    document.getElementById('timerIdleBox').style.display = 'flex';
+    document.getElementById('timerRunningBox').style.display = 'none';
+    return;
+  }
+  document.getElementById('timerIdleBox').style.display = 'none';
+  document.getElementById('timerRunningBox').style.display = 'flex';
+  const label = CATEGORY_LABEL[timer.category] || timer.category;
+  const tick = ()=>{
+    const elapsedMin = Math.max(0, Math.floor((Date.now() - new Date(timer.startISO).getTime())/60000));
+    document.getElementById('timerRunningLabel').textContent = `⏱ กำลังทำ: ${label} — ${fmtDur(elapsedMin)}`;
+  };
+  tick();
+  timerTickInterval = setInterval(tick, 15000); // อัปเดตทุก 15 วิ พอสำหรับหน่วยนาที ไม่ต้อง render ถี่เกินจำเป็น
+}
+
+document.getElementById('btnStartTimer').addEventListener('click', ()=>{
+  if(appData.runningTimer){ showToast('มีการจับเวลาค้างอยู่แล้ว กด "หยุด" ก่อน'); return; }
+  const category = document.getElementById('quickTimerCategory').value;
+  appData.runningTimer = { category, timelineDay: currentDay, startISO: new Date().toISOString() };
+  scheduleSave();
+  updateTimerUI();
+  showToast(`เริ่มจับเวลา: ${CATEGORY_LABEL[category]||category}`);
+});
+
+document.getElementById('btnStopTimer').addEventListener('click', ()=>{
+  const timer = appData.runningTimer;
+  if(!timer) return;
+  appData.runningTimer = null;
+  scheduleSave();
+  updateTimerUI();
+  // เปิด modal ให้ผู้ใช้ตรวจสอบ/แก้ไขก่อนบันทึกจริง แทนการบันทึกอัตโนมัติทันที (กันกรณีลืมหยุดแล้วเวลาเพี้ยน)
+  openModal(null, { category: timer.category });
+  document.getElementById('fTimelineDay').value = timer.timelineDay;
+  setTimeValue('fStartTime', fmtHM(new Date(timer.startISO)));
+  document.getElementById('fStartPrecision').value = 'exact';
+  document.getElementById('fStartCross').checked = dateStrOf(new Date(timer.startISO)) !== timer.timelineDay;
+  setTimeValue('fEndTime', fmtHM(new Date()));
+  document.getElementById('fEndPrecision').value = 'exact';
+  // ห้าม re-capture modalSnapshot ตรงนี้: appData.runningTimer ถูกล้างและ save ไปแล้วตั้งแต่ตอนกดหยุด ถ้าเทียบ
+  // "มีการแก้ไขหรือไม่" กับค่าที่ auto-fill มาแล้ว การปิด modal โดยไม่แตะอะไรเลยจะดูเหมือน "ไม่มีการเปลี่ยนแปลง"
+  // และปิดแบบไม่เตือน ทั้งที่เวลาที่จับไว้จะหายถาวร จึงบังคับให้ต้อง confirm ก่อนปิดเสมอในเคสนี้แทน
+  forceConfirmOnClose = true;
+});
+
+document.getElementById('btnCopyYesterday').addEventListener('click', ()=>{
+  const yesterday = addDaysToDateStr(currentDay, -1);
+  const acts = getActivitiesForDay(yesterday);
+  if(acts.length===0){ showToast('เมื่อวาน (เทียบกับวันที่กำลังดูอยู่) ไม่มีกิจกรรมให้คัดลอก'); return; }
+  if(!confirm(`คัดลอกกิจกรรมทั้งหมดจากเมื่อวาน (${acts.length} รายการ) มาไว้ในวันนี้ โดยใช้เวลาเดิม ต้องการดำเนินการต่อหรือไม่?`)) return;
+  const now = new Date().toISOString();
+  acts.forEach(a=>{
+    // ต้องส่ง a.startCrossesMidnight เข้าไปกำหนดวันที่จริงของ newStart เหมือนที่ computeStartDateTime()
+    // ทำตอนสร้าง/แก้ไขกิจกรรมปกติ ไม่ใช่ผูกกับ currentDay ตรงๆ เสมอ ไม่งั้นกิจกรรมที่ข้ามเที่ยงคืน (เช่น "นอน" 00:30)
+    // จะได้ startISO เร็วกว่ากิจกรรมกลางวันของวันเดียวกัน ทำให้ ledger เรียงลำดับผิดและสถิติ duration เพี้ยน
+    const newStart = computeStartDateTime(currentDay, a.startTime, a.startCrossesMidnight);
+    let newEnd = null, durMin = a.durationMinutes;
+    if(!a.isMilestone){
+      newEnd = computeEndDateTime(newStart, a.endTime); // ฟังก์ชันนี้จัดการข้ามเที่ยงคืนแบบสัมพัทธ์กับ start ให้อยู่แล้ว
+      durMin = Math.round((newEnd - newStart)/60000);
+    }
+    appData.activities.push({
+      id: nextId++, timelineDay: currentDay, category:a.category, pages:a.pages, detail:a.detail, isMilestone:a.isMilestone,
+      startTime:a.startTime, startCrossesMidnight:a.startCrossesMidnight, startPrecision:a.startPrecision, startISO:newStart.toISOString(),
+      endTime:a.endTime, endPrecision:a.endPrecision, endISO: newEnd?newEnd.toISOString():null, durationMinutes:durMin,
+      createdAt:now, updatedAt:now
+    });
+  });
+  ensureDay(currentDay);
+  scheduleSave();
+  renderToday();
+  showToast(`คัดลอก ${acts.length} กิจกรรมจากเมื่อวานแล้ว — ตรวจสอบเวลาอีกครั้งก่อนจบวัน`);
+});
+
+/* ---- Pop-up แนะนำ "รายละเอียด" ที่เคยกรอกซ้ำในหมวดหมู่เดียวกันตั้งแต่ 3 ครั้งขึ้นไป
+   เช่น หมวด "อ่านหนังสือ" เคยกรอก detail "The Inmate" มาแล้ว 3 ครั้ง ก็จะมีให้เลือกจาก pop-up
+   แทนที่จะต้องพิมพ์ใหม่ทุกครั้ง ใช้กับทุกหมวดหมู่เหมือนกัน (นับแยกตาม category) ---- */
+const fDetailEl = document.getElementById('fDetail');
+const fDetailSuggestEl = document.getElementById('fDetailSuggest');
+
+function getFrequentDetails(category){
+  if(!category) return [];
+  const counts = new Map();
+  appData.activities.forEach(a=>{
+    if(a.category!==category) return;
+    const d = (a.detail||'').trim();
+    if(!d) return;
+    counts.set(d, (counts.get(d)||0)+1);
+  });
+  return Array.from(counts.entries())
+    .filter(([,count])=>count>=3)
+    .sort((a,b)=>b[1]-a[1])
+    .map(([detail,count])=>({detail,count}));
+}
+
+/* คู่ (หมวดหมู่ + ระยะเวลาปัดเป็นช่วง 15 นาที) ที่ทำซ้ำบ่อยใน 30 วันล่าสุด (>=3 ครั้ง) เอามาเป็นปุ่มลัด
+   ต่อยอดจาก getFrequentDetails — ส่วน "ทำเหมือนเมื่อวานเป๊ะ" มีปุ่มคัดลอกจากเมื่อวานอยู่แล้ว จึงไม่ทำซ้ำ */
+function getFrequentCombos(){
+  const counts = new Map(); // key = `${category}|${roundedMinutes}`
+  const cutoff = addDaysToDateStr(todayStr(), -30);
+  const validCats = new Set(DURATION_CATEGORIES.map(c=>c.value));
+  appData.activities.forEach(a=>{
+    if(a.isMilestone || a.timelineDay < cutoff || !validCats.has(a.category)) return;
+    const rounded = Math.round((a.durationMinutes||0)/15)*15;
+    if(rounded<=0) return;
+    const key = `${a.category}|${rounded}`;
+    counts.set(key, (counts.get(key)||0)+1);
+  });
+  return Array.from(counts.entries())
+    .filter(([,c])=>c>=3)
+    .sort((a,b)=>b[1]-a[1])
+    .slice(0,3)
+    .map(([key,count])=>{ const [category,minutes]=key.split('|'); return {category, minutes:+minutes, count}; });
+}
+
+const QUICK_LABEL = { reading:'อ่านหนังสือ', course:'เรียนคอร์ส', exercise:'ออกกำลังกาย', work:'ทำงาน', project:'ทำโปรเจกต์', other:'อื่น ๆ' };
+
+/* ชิปลัดโชว์เฉพาะตอนดู "วันนี้จริง" — เวลาที่เติมให้อิงตอนนี้ (จบ=ตอนนี้, เริ่ม=ตอนนี้-ระยะเวลา) ถ้าดูวันย้อนหลังจะไม่ตรงกับวันที่เปิดอยู่ */
+function renderQuickChips(){
+  const box = document.getElementById('quickChips');
+  const combos = (currentDay===effectiveTodayStr()) ? getFrequentCombos() : [];
+  box.innerHTML = '';
+  combos.forEach(cb=>{
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'quick-chip';
+    btn.title = `ทำบ่อย ${cb.count} ครั้งใน 30 วันล่าสุด — กดเพื่อเปิดหน้าต่างเพิ่มกิจกรรมพร้อมเติมให้ (ยังไม่บันทึกจนกว่าจะกดบันทึก)`;
+    const dot = document.createElement('span');
+    dot.className = 'cat-dot';
+    dot.style.background = CATEGORY_COLORS[cb.category] || '#8B939C';
+    btn.appendChild(dot);
+    btn.appendChild(document.createTextNode(`${QUICK_LABEL[cb.category] || cb.category} ${cb.minutes}น.`));
+    btn.addEventListener('click', ()=>{
+      const topDetail = getFrequentDetails(cb.category)[0];
+      openModal(null, { category:cb.category, durationMinutes:cb.minutes, detail: topDetail ? topDetail.detail : '' });
+    });
+    box.appendChild(btn);
+  });
+}
+
+function hideDetailSuggestions(){
+  fDetailSuggestEl.classList.remove('active');
+  fDetailSuggestEl.innerHTML = '';
+}
+
+function renderDetailSuggestions(){
+  const category = document.getElementById('fCategory').value;
+  const typed = fDetailEl.value.trim().toLowerCase();
+  const all = getFrequentDetails(category);
+  const matches = typed
+    ? all.filter(x=>x.detail.toLowerCase().includes(typed) && x.detail.toLowerCase()!==typed)
+    : all;
+  fDetailSuggestEl.innerHTML = '';
+  if(matches.length===0){ hideDetailSuggestions(); return; }
+  matches.forEach(x=>{
+    const item = document.createElement('div');
+    item.className = 'detail-suggest-item';
+    const label = document.createElement('span');
+    label.className = 'detail-suggest-label';
+    label.textContent = x.detail; // ใช้ textContent เสมอ ไม่ผ่าน innerHTML กัน XSS จากข้อความที่เคยกรอกไว้
+    const count = document.createElement('span');
+    count.className = 'detail-suggest-count';
+    count.textContent = `×${x.count}`;
+    item.append(label, count);
+    /* ใช้ mousedown + preventDefault แทน click เพื่อเลือกก่อนที่ blur ของ textarea จะทำงาน */
+    item.addEventListener('mousedown', (e)=>{
+      e.preventDefault();
+      fDetailEl.value = x.detail;
+      hideDetailSuggestions();
+      fDetailEl.focus();
+    });
+    fDetailSuggestEl.appendChild(item);
+  });
+  fDetailSuggestEl.classList.add('active');
+}
+
+fDetailEl.addEventListener('focus', renderDetailSuggestions);
+fDetailEl.addEventListener('input', renderDetailSuggestions);
+fDetailEl.addEventListener('keydown', (e)=>{
+  // ถ้า pop-up แนะนำเปิดอยู่ ให้ Esc ปิดแค่ pop-up ก่อน ไม่ให้ไปปิด modal ทั้งอันทั้งที่ตั้งใจแค่ปิดคำแนะนำ
+  if(e.key==='Escape' && fDetailSuggestEl.classList.contains('active')){
+    hideDetailSuggestions();
+    e.stopPropagation();
+  }
+});
+fDetailEl.addEventListener('blur', ()=>{
+  setTimeout(hideDetailSuggestions, 150); // ดีเลย์ให้ mousedown ของ item ด้านบนทำงานก่อน
+});
+document.getElementById('fCategory').addEventListener('change', ()=>{
+  if(fDetailSuggestEl.classList.contains('active')) renderDetailSuggestions();
+});
+
+/* ปิด modal ได้ 3 ทาง (ปุ่มยกเลิก / คลิกนอกกรอบ / Esc) ทุกทางต้องเช็ค unsaved-changes เหมือนกัน
+   จึงรวม logic ไว้ที่ tryCloseModal() ตัวเดียว แล้วเรียกจากทั้ง 3 จุด กันข้อมูลหายเงียบๆ ตอนมือลื่นกด Esc/ยกเลิก */
+function tryCloseModal(){
+  const changed = forceConfirmOnClose || (modalSnapshot!==null && JSON.stringify(captureFormValues())!==modalSnapshot);
+  if(changed && !confirm('มีข้อมูลที่กรอกไว้ยังไม่ได้บันทึก ต้องการปิดหน้าต่างนี้โดยไม่บันทึกหรือไม่?')) return;
+  closeModal();
+}
+document.getElementById('btnModalCancel').addEventListener('click', tryCloseModal);
+overlay.addEventListener('click', (e)=>{
+  if(e.target!==overlay) return;
+  tryCloseModal();
+});
+document.addEventListener('keydown', (e)=>{
+  if(e.key==='Escape' && overlay.classList.contains('active')){ tryCloseModal(); return; }
+  if(e.key==='Escape' && goalsOverlay.classList.contains('active')){ closeGoalsModal(); return; }
+  // Ctrl+Enter (หรือ Cmd+Enter บน Mac) บันทึก modal ได้ทันทีโดยไม่ต้องเอื้อมไปกดปุ่ม
+  if(overlay.classList.contains('active') && (e.ctrlKey||e.metaKey) && e.key==='Enter'){
+    e.preventDefault();
+    document.getElementById('btnModalSave').click();
+    return;
+  }
+  // กด N เพิ่มกิจกรรมใหม่ได้ทันที — เฉพาะตอนไม่ได้โฟกัสอยู่ในช่องพิมพ์ข้อความใดๆ (กันพิมพ์ตัว n ปนไปเปิด modal)
+  if(e.key.toLowerCase()==='n' && !overlay.classList.contains('active') && !goalsOverlay.classList.contains('active')){
+    const tag = (document.activeElement && document.activeElement.tagName) || '';
+    const isTyping = tag==='INPUT' || tag==='TEXTAREA' || tag==='SELECT' || (document.activeElement && document.activeElement.isContentEditable);
+    if(!isTyping && document.getElementById('view-today').classList.contains('active')){
+      e.preventDefault();
+      openModal(null);
+    }
+  }
+});
+
+document.querySelectorAll('#segType button').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    modalType = b.dataset.type;
+    document.querySelectorAll('#segType button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    updateModalTypeUI();
+    document.getElementById('fCategory').selectedIndex = 0;
+  });
+});
+document.getElementById('fUseReverse').addEventListener('change', (e)=>{
+  document.getElementById('reverseInputs').style.display = e.target.checked ? 'block' : 'none';
+  document.getElementById('fStartTimeWrap').closest('.row2').style.display = e.target.checked ? 'none' : 'grid';
+  document.getElementById('fStartCross').closest('.checkline').style.display = e.target.checked ? 'none' : 'flex';
+});
+
+/* ---- 24-hour dropdown time picker (no native AM/PM control) ---- */
+function buildTimeSelect(sel, max){
+  let html = '';
+  for(let i=0;i<=max;i++){ html += `<option value="${pad2(i)}">${pad2(i)}</option>`; }
+  sel.innerHTML = html;
+}
+buildTimeSelect(document.getElementById('fStartTimeH'), 23);
+buildTimeSelect(document.getElementById('fStartTimeM'), 59);
+buildTimeSelect(document.getElementById('fEndTimeH'), 23);
+buildTimeSelect(document.getElementById('fEndTimeM'), 59);
+
+function getTimeValue(prefix){
+  const h = document.getElementById(prefix+'H').value;
+  const m = document.getElementById(prefix+'M').value;
+  if(h===''||m==='') return '';
+  return `${h}:${m}`;
+}
+function setTimeValue(prefix, val){
+  const t = parseTimeStr(val);
+  const hSel = document.getElementById(prefix+'H');
+  const mSel = document.getElementById(prefix+'M');
+  hSel.value = t ? pad2(t.h) : '00';
+  mSel.value = t ? pad2(t.m) : '00';
+}
+
+function populateCategoryOptions(isMilestone, selectedValue){
+  const sel = document.getElementById('fCategory');
+  const list = isMilestone ? MILESTONE_CATEGORIES : DURATION_CATEGORIES;
+  sel.innerHTML = list.map(c=>`<option value="${c.value}">${c.label}</option>`).join('');
+  if(selectedValue){
+    if(list.some(c=>c.value===selectedValue)){
+      sel.value = selectedValue;
+    } else {
+      // หมวดหมู่เดิมไม่อยู่ใน list ปัจจุบัน (เช่น ไฟล์ import จากเวอร์ชันเก่า/แก้ JSON เอง) — ห้าม fallback ไปเลือก
+      // ตัวแรกใน <select> แบบเงียบๆ เพราะกด "บันทึก" โดยไม่ได้ตั้งใจแตะช่องนี้เลยจะเขียนทับ category เดิมทันที
+      // จึง inject option พิเศษที่คง value เดิมไว้ให้เห็นชัด พร้อมเตือนผู้ใช้แทน
+      const opt = document.createElement('option');
+      opt.value = selectedValue;
+      opt.textContent = `⚠️ ${selectedValue} (ไม่อยู่ในลิสต์ปัจจุบัน)`;
+      sel.insertBefore(opt, sel.firstChild);
+      sel.value = selectedValue;
+      showToast('หมวดหมู่เดิมของกิจกรรมนี้ไม่อยู่ในลิสต์ปัจจุบัน กด "บันทึก" จะเขียนทับด้วยหมวดหมู่ที่เลือก — เลือกหมวดหมู่ใหม่ก่อนถ้าไม่ต้องการเปลี่ยน');
+    }
+  }
+}
+
+function updateModalTypeUI(preserveCategory){
+  const isMilestone = modalType==='milestone';
+  document.getElementById('fieldEndTime').style.display = isMilestone ? 'none' : 'block';
+  document.getElementById('fieldReverseCalc').style.display = isMilestone ? 'none' : 'block';
+  document.getElementById('fieldPages').style.display = isMilestone ? 'none' : 'block';
+  document.getElementById('fieldDetail').style.display = isMilestone ? 'none' : 'block';
+  document.getElementById('lblStart').textContent = isMilestone ? 'เวลา *' : 'เวลาเริ่ม *';
+  populateCategoryOptions(isMilestone, preserveCategory);
+  if(isMilestone){
+    document.getElementById('fUseReverse').checked = false;
+    document.getElementById('reverseInputs').style.display = 'none';
+    document.getElementById('fStartTimeWrap').closest('.row2').style.display = 'grid';
+    document.getElementById('fStartCross').closest('.checkline').style.display = 'flex';
+  }
+}
+
+/* Guess whether a newly-entered start time falls after midnight relative to
+   the Timeline Day, by comparing it against the latest already-recorded
+   time for that same Timeline Day. Time only moves forward within one
+   Timeline Day, so if the candidate same-day time is earlier than (or equal
+   to) the latest known moment, it must actually belong to the next calendar
+   date. The very first entry of a day is assumed not to cross midnight. */
+function inferCrossesMidnight(timelineDay, timeStr, excludeId){
+  const t = parseTimeStr(timeStr);
+  if(!t) return false;
+  const acts = appData.activities.filter(a=>a.timelineDay===timelineDay && a.id!==excludeId);
+  if(acts.length===0) return false;
+
+  // สัญญาณที่แม่นยำที่สุด: milestone "ตื่น" ของวันนั้น ถ้ามี ให้ใช้เป็นจุดอ้างอิง
+  // เวลาที่ "เร็วกว่า" เวลาตื่น (เทียบเฉพาะ HH:MM) ต้องเป็นช่วงเช้ามืดก่อนตื่นรอบถัดไป
+  // จึงข้ามเที่ยงคืนเสมอ วิธีนี้ถูกต้องไม่ว่าจะเพิ่มกิจกรรมตามลำดับเวลาจริงหรือไม่ก็ตาม
+  const wake = acts.find(a=>a.isMilestone && a.category==='wake' && a.startTime);
+  if(wake){
+    const wt = parseTimeStr(wake.startTime);
+    if(wt) return (t.h*60+t.m) < (wt.h*60+wt.m);
+  }
+
+  // ไม่มี milestone ตื่นให้ยึด: fallback เดิม — เทียบกับเวลาล่าสุดที่มีอยู่
+  // (แม่นเฉพาะกรณีเพิ่มกิจกรรมเรียงตามเวลาจริง checkbox ยังปรับเองได้เสมอ)
+  let lastDate = null;
+  acts.forEach(a=>{
+    const s = new Date(a.startISO);
+    if(!lastDate || s>lastDate) lastDate = s;
+    if(a.endISO){
+      const e = new Date(a.endISO);
+      if(e>lastDate) lastDate = e;
+    }
+  });
+  const candidateSameDay = combineDateTime(timelineDay, t);
+  return candidateSameDay.getTime() <= lastDate.getTime();
+}
+
+let crossTouchedByUser = false; // true เมื่อผู้ใช้แก้ checkbox "ข้ามเที่ยงคืน" เอง — กัน auto-guess ทับค่าที่แก้แล้ว
+
+function updateStartCrossSuggestion(){
+  if(crossTouchedByUser) return; // ผู้ใช้แก้เองแล้ว ไม่เดาทับ
+  const timelineDay = document.getElementById('fTimelineDay').value;
+  const startTime = getTimeValue('fStartTime');
+  if(!timelineDay || !startTime) return;
+  const guess = inferCrossesMidnight(timelineDay, startTime, editingId);
+  document.getElementById('fStartCross').checked = guess;
+}
+document.getElementById('fStartTimeH').addEventListener('change', updateStartCrossSuggestion);
+document.getElementById('fStartTimeM').addEventListener('change', updateStartCrossSuggestion);
+document.getElementById('fTimelineDay').addEventListener('change', updateStartCrossSuggestion);
+document.getElementById('fStartCross').addEventListener('change', ()=>{ crossTouchedByUser = true; });
+
+/* เดาว่า "เวลาสิ้นสุด" ที่กรอกในโหมดคำนวณเวลาเริ่มจากระยะเวลา อยู่ก่อนหรือหลังเที่ยงคืนของ Timeline Day
+   เดิมระบบสมมติว่า end อยู่วันเดียวกับ timelineDay เสมอ (ไม่เดาข้ามเที่ยงคืนฝั่ง end เลย) ทำให้กรณีจบดึก
+   เช่น 01:30 คำนวณ start ผิดไปเป็นวันก่อนหน้าของ timelineDay ซึ่งพัง flag startCrossesMidnight ที่รองรับ
+   แค่ทิศทาง "ไปข้างหน้า" (timelineDay+1) เท่านั้น ใช้ inferCrossesMidnight ตัวเดียวกับฝั่ง start ได้เลย */
+let endCrossTouchedByUser = false;
+function updateEndCrossSuggestion(){
+  if(endCrossTouchedByUser) return;
+  const timelineDay = document.getElementById('fTimelineDay').value;
+  const endTime = getTimeValue('fEndTime');
+  if(!timelineDay || !endTime) return;
+  const guess = inferCrossesMidnight(timelineDay, endTime, editingId);
+  document.getElementById('fEndCross').checked = guess;
+  updateReverseDateHint();
+}
+function updateReverseDateHint(){
+  const timelineDay = document.getElementById('fTimelineDay').value;
+  const endTime = getTimeValue('fEndTime');
+  const hintEl = document.getElementById('reverseDateHint');
+  if(!timelineDay || !parseTimeStr(endTime)){ hintEl.textContent=''; return; }
+  const endCrosses = document.getElementById('fEndCross').checked;
+  const dateStr = endCrosses ? addDaysToDateStr(timelineDay,1) : timelineDay;
+  const [y,mo,d] = dateStr.split('-').map(Number);
+  hintEl.textContent = `→ เวลาสิ้นสุดจะถูกบันทึกเป็นวันที่ ${d} ${MONTHS_TH[mo-1]} ${y+543}`;
+}
+document.getElementById('fEndTimeH').addEventListener('change', updateEndCrossSuggestion);
+document.getElementById('fEndTimeM').addEventListener('change', updateEndCrossSuggestion);
+document.getElementById('fEndCross').addEventListener('change', ()=>{ endCrossTouchedByUser = true; updateReverseDateHint(); });
+document.getElementById('fUseReverse').addEventListener('change', ()=>{ if(document.getElementById('fUseReverse').checked) updateEndCrossSuggestion(); });
+
+function openModal(id, prefill){
+  editingId = id;
+  forceConfirmOnClose = false;
+  crossTouchedByUser = false;
+  endCrossTouchedByUser = false;
+  document.getElementById('fEndCross').checked = false;
+  document.getElementById('modalErr').classList.remove('active');
+  const a = id!=null ? appData.activities.find(x=>x.id===id) : null;
+  const pre = (!a && prefill) ? prefill : null; // ใช้ตอน "ทำซ้ำกิจกรรม" — เติมหมวดหมู่/รายละเอียดให้ แต่เวลาเป็นค่าเริ่มต้นใหม่เสมอ
+
+  document.getElementById('modalTitle').textContent = a ? 'แก้ไขกิจกรรม' : (pre && !pre.durationMinutes ? 'คัดลอกกิจกรรม' : 'เพิ่มกิจกรรม');
+  modalType = a ? (a.isMilestone ? 'milestone' : 'duration') : ((pre && pre.isMilestone) ? 'milestone' : 'duration');
+  document.querySelectorAll('#segType button').forEach(b=>b.classList.toggle('active', b.dataset.type===modalType));
+  updateModalTypeUI(a ? a.category : (pre ? pre.category : null));
+
+  document.getElementById('fTimelineDay').value = a ? a.timelineDay : currentDay;
+  document.getElementById('fPages').value = a && a.pages ? a.pages : ((pre && pre.pages) ? pre.pages : '');
+  document.getElementById('fDetail').value = a ? (a.detail||'') : (pre ? (pre.detail||'') : '');
+  const nowDate = new Date();
+  const defaultTime = fmtHM(nowDate);
+  // มาจาก quick-add chip: ตั้งเวลาจบ = ตอนนี้ เวลาเริ่ม = ตอนนี้ - ระยะเวลา (แก้ได้ก่อนกดบันทึก)
+  const quickStart = (pre && pre.durationMinutes) ? fmtHM(new Date(nowDate.getTime() - pre.durationMinutes*60000)) : null;
+  setTimeValue('fStartTime', a ? a.startTime : (quickStart || defaultTime));
+  document.getElementById('fStartPrecision').value = a ? a.startPrecision : 'exact';
+  document.getElementById('fStartCross').checked = a ? !!a.startCrossesMidnight : false;
+  setTimeValue('fEndTime', a && a.endTime ? a.endTime : defaultTime);
+  document.getElementById('fEndPrecision').value = a && a.endPrecision ? a.endPrecision : 'exact';
+  document.getElementById('fUseReverse').checked = false;
+  document.getElementById('reverseInputs').style.display = 'none';
+  document.getElementById('fDurHours').value = '';
+  document.getElementById('fDurMins').value = '';
+  document.getElementById('fStartTimeWrap').closest('.row2').style.display = 'grid';
+  document.getElementById('fStartCross').closest('.checkline').style.display = 'flex';
+  hideDetailSuggestions();
+
+  if(!a){ updateStartCrossSuggestion(); }
+
+  modalSnapshot = JSON.stringify(captureFormValues());
+  overlay.classList.add('active');
+}
+function closeModal(){ overlay.classList.remove('active'); modalSnapshot = null; forceConfirmOnClose = false; hideDetailSuggestions(); }
+
+document.getElementById('btnModalSave').addEventListener('click', ()=>{
+  const errEl = document.getElementById('modalErr');
+  errEl.classList.remove('active');
+
+  const timelineDay = document.getElementById('fTimelineDay').value;
+  const category = document.getElementById('fCategory').value || null;
+
+  if(!timelineDay){ return showErr('กรุณาระบุ Timeline Day'); }
+  if(!category){ return showErr('กรุณาเลือกหมวดหมู่'); }
+
+  const isMilestone = modalType==='milestone';
+  const useReverse = !isMilestone && document.getElementById('fUseReverse').checked;
+
+  // milestone ไม่มีช่อง pages/detail แต่ช่อง input ยังอยู่ใน DOM (แค่ซ่อน) — เดิมอ่านค่าจากช่องนี้เสมอ
+  // ไม่ว่าจะเป็น milestone หรือไม่ ทำให้ pages/detail ที่เคยกรอกไว้ก่อนสลับประเภทรั่วเข้าไปติดกับ milestone
+  // ซึ่งไปปนกับสถิติ totalPages โดยไม่ตั้งใจ จึงบังคับเป็นค่าว่างเสมอเมื่อเป็น milestone
+  const pagesRaw = isMilestone ? '' : document.getElementById('fPages').value.trim();
+  // เช็คด้วย regex แบบเดียวกับ duration hours/minutes ก่อน parseInt เสมอ ไม่งั้นค่าทศนิยม เช่น "3.5"
+  // จะถูก parseInt ตัดเหลือ "3" แบบเงียบๆ โดยไม่มี error/warning ทั้งที่ validate ช่องอื่นเข้มงวดกว่านี้
+  if(pagesRaw && !/^\d+$/.test(pagesRaw)){
+    return showErr('จำนวนหน้าต้องเป็นจำนวนเต็มไม่ติดลบ (ไม่รองรับทศนิยม)');
+  }
+  const pages = pagesRaw ? parseInt(pagesRaw,10) : null;
+  const detail = isMilestone ? '' : document.getElementById('fDetail').value.trim();
+  if(pages!=null && (isNaN(pages) || pages<0)){
+    return showErr('จำนวนหน้าต้องเป็นจำนวนเต็มไม่ติดลบ');
+  }
+
+  let startTime, startCrosses, startPrecision, startISO;
+  let endTime=null, endPrecision=null, endISO=null, durMin=null;
+
+  if(useReverse){
+    endTime = getTimeValue('fEndTime');
+    endPrecision = document.getElementById('fEndPrecision').value;
+    const hRaw = document.getElementById('fDurHours').value.trim();
+    const mRaw = document.getElementById('fDurMins').value.trim();
+    if((hRaw && !/^\d+$/.test(hRaw)) || (mRaw && !/^\d+$/.test(mRaw))){
+      return showErr('ระยะเวลาโดยประมาณต้องเป็นจำนวนเต็ม (ชั่วโมง/นาที) เท่านั้น ไม่รองรับทศนิยม');
+    }
+    const h = parseInt(hRaw||'0',10);
+    const m = parseInt(mRaw||'0',10);
+    const totalMin = (isNaN(h)?0:h)*60 + (isNaN(m)?0:m);
+    if(!parseTimeStr(endTime)) return showErr('รูปแบบเวลาสิ้นสุดไม่ถูกต้อง (HH:MM)');
+    if(totalMin<=0) return showErr('กรุณาระบุระยะเวลาโดยประมาณ');
+    // ใช้ checkbox "ข้ามเที่ยงคืน" ของ end (เดา/ปรับเองได้) แทนที่จะสมมติว่า end อยู่วันเดียวกับ timelineDay
+    // เสมอ — เดิมไม่มีการเดาข้ามเที่ยงคืนฝั่ง end เลย ทำให้กรณีจบดึก (เช่น 01:30) คำนวณ start ผิดไปเป็น
+    // วันก่อนหน้าของ timelineDay ซึ่ง flag startCrossesMidnight ไม่รองรับทิศทางนั้น (รองรับแค่ +1 วัน)
+    const endCrosses = document.getElementById('fEndCross').checked;
+    const endDateStr = endCrosses ? addDaysToDateStr(timelineDay,1) : timelineDay;
+    const endDateGuess = combineDateTime(endDateStr, parseTimeStr(endTime));
+    const startDate = computeStartFromDuration(endDateGuess, totalMin);
+    startISO = startDate.toISOString();
+    endISO = endDateGuess.toISOString();
+    startTime = fmtHM(startDate);
+    startCrosses = dateStrOf(startDate) !== timelineDay;
+    startPrecision = 'calculated';
+    durMin = totalMin;
+  } else {
+    startTime = getTimeValue('fStartTime');
+    startPrecision = document.getElementById('fStartPrecision').value;
+    startCrosses = document.getElementById('fStartCross').checked;
+    if(!parseTimeStr(startTime)) return showErr('รูปแบบเวลาเริ่ม/เวลาไม่ถูกต้อง (HH:MM)');
+    const startDate = computeStartDateTime(timelineDay, startTime, startCrosses);
+    startISO = startDate.toISOString();
+
+    if(!isMilestone){
+      endTime = getTimeValue('fEndTime');
+      endPrecision = document.getElementById('fEndPrecision').value;
+      if(!parseTimeStr(endTime)) return showErr('รูปแบบเวลาสิ้นสุดไม่ถูกต้อง (HH:MM)');
+      const endDate = computeEndDateTime(startDate, endTime);
+      endISO = endDate.toISOString();
+      durMin = durationMinutes(startDate, endDate);
+    }
+  }
+
+  if(!isMilestone){
+    if(durMin<=0){
+      return showErr('ระยะเวลาต้องมากกว่า 0 นาที กรุณาตรวจสอบเวลาเริ่ม/เวลาสิ้นสุดอีกครั้ง');
+    }
+    if(durMin>12*60){
+      if(!confirm(`ระยะเวลานี้ยาว ${fmtDur(durMin)} ต้องการบันทึกต่อไปหรือไม่?`)) return;
+    }
+    const newStartMs = new Date(startISO).getTime();
+    const newEndMs = new Date(endISO).getTime();
+    /* เช็คทับซ้อนกับกิจกรรมทั้งหมด ไม่ใช่แค่ใน timelineDay เดียวกัน — timelineDay เป็นแค่ bucket
+       จัดกลุ่มที่ผู้ใช้ตั้งเอง เวลาจริง (startISO/endISO) ของกิจกรรมที่ข้ามเที่ยงคืนอาจทับกับ
+       กิจกรรมของ timelineDay ถัดไปได้ จึงต้องเทียบด้วย timestamp จริงกับทุกกิจกรรม ไม่ใช่แค่บัคเก็ตเดียว */
+    const overlapping = appData.activities
+      .filter(a=>a.id!==editingId && a.endISO)
+      .some(a=>{
+        const aStartMs = new Date(a.startISO).getTime();
+        const aEndMs = new Date(a.endISO).getTime();
+        return newStartMs < aEndMs && aStartMs < newEndMs;
+      });
+    if(overlapping && !confirm('ช่วงเวลานี้ทับซ้อนกับกิจกรรมอื่น (อาจอยู่คนละ Timeline Day ถ้ามีการข้ามเที่ยงคืน) ต้องการบันทึกต่อไปหรือไม่?')) return;
+  }
+
+  const now = new Date().toISOString();
+  let oldDay = null;
+  if(editingId!=null){
+    const a = appData.activities.find(x=>x.id===editingId);
+    oldDay = a.timelineDay;
+    Object.assign(a, {
+      timelineDay, category, pages, detail, isMilestone,
+      startTime, startCrossesMidnight: startCrosses, startPrecision, startISO,
+      endTime, endPrecision, endISO, durationMinutes: durMin,
+      updatedAt: now
+    });
+  } else {
+    appData.activities.push({
+      id: nextId++, timelineDay, category, pages, detail, isMilestone,
+      startTime, startCrossesMidnight: startCrosses, startPrecision, startISO,
+      endTime, endPrecision, endISO, durationMinutes: durMin,
+      createdAt: now, updatedAt: now
+    });
+  }
+  ensureDay(timelineDay);
+  // ถ้าย้ายกิจกรรมนี้ไปวันอื่นแล้ววันเดิมไม่มีกิจกรรมเหลืออยู่เลย ให้ลบ day record เดิมทิ้ง กันวันว่างค้าง
+  if(oldDay && oldDay!==timelineDay && getActivitiesForDay(oldDay).length===0){
+    delete appData.days[oldDay];
+  }
+  scheduleSave();
+  closeModal();
+  if(timelineDay===currentDay){ renderToday(); }
+  else { currentDay = timelineDay; document.getElementById('dayPicker').value = currentDay; renderToday(); }
+  showToast('บันทึกกิจกรรมแล้ว');
+});
+
+function showErr(msg){
+  const el = document.getElementById('modalErr');
+  el.textContent = msg;
+  el.classList.add('active');
+}
+
+/* ============================================================
+   7. HISTORY VIEW
+   ============================================================ */
+const historyCategorySelect = document.getElementById('historyCategoryFilter');
+historyCategorySelect.innerHTML += DURATION_CATEGORIES.concat(MILESTONE_CATEGORIES)
+  .map(c=>`<option value="${c.value}">${c.label}</option>`).join('');
+
+/* วันนี้ผ่าน filter ถ้ามี activity ที่ตรงเงื่อนไข "ทั้งหมวดหมู่และคำค้น" พร้อมกัน (AND)
+   เดิมใช้ || ทำให้เลือกหมวดหมู่ A แล้วค้นคำ B ได้ผลลัพธ์ทุกวันที่มีหมวด A หรือมีคำ B แยกกัน ซึ่งกว้างเกินไป */
+function dayMatchesFilter(day, searchTerm, categoryFilter){
+  if(!searchTerm && !categoryFilter) return true;
+  return getActivitiesForDay(day).some(a=>{
+    const categoryOk = !categoryFilter || a.category===categoryFilter;
+    const searchOk = !searchTerm || (a.detail||'').toLowerCase().includes(searchTerm);
+    return categoryOk && searchOk;
+  });
+}
+
+function renderHistory(){
+  const container = document.getElementById('historyContainer');
+  const searchTerm = document.getElementById('historySearch').value.trim().toLowerCase();
+  const categoryFilter = historyCategorySelect.value;
+  let days = Object.keys(appData.days).sort().reverse();
+  if(searchTerm || categoryFilter){
+    days = days.filter(d=>dayMatchesFilter(d, searchTerm, categoryFilter));
+  }
+  if(days.length===0){
+    const filtering = searchTerm || categoryFilter;
+    container.innerHTML = `<div class="empty"><div class="big">${filtering?'ไม่พบวันที่ตรงกับเงื่อนไขค้นหา':'ยังไม่มีประวัติ'}</div>${filtering?'ลองปรับคำค้นหรือหมวดหมู่':'เริ่มบันทึกกิจกรรมในแท็บ "วันนี้"'}</div>`;
+    return;
+  }
+  const groups = {};
+  days.forEach(d=>{
+    const [y,mo] = d.split('-');
+    const key = `${y}-${mo}`;
+    if(!groups[key]) groups[key] = [];
+    groups[key].push(d);
+  });
+  container.innerHTML = Object.keys(groups).sort().reverse().map(key=>{
+    const [y,mo] = key.split('-').map(Number);
+    const rows = groups[key].map(d=>{
+      const acts = getActivitiesForDay(d);
+      const info = appData.days[d];
+      const [,,dd] = d.split('-');
+      // กันพังกรณี key วันที่รูปแบบผิด (เช่นหลุดมาจากไฟล์ import ที่ไม่ผ่าน validate) — WEEKDAYS_TH[NaN] จะ throw
+      const parsedDate = /^\d{4}-\d{2}-\d{2}$/.test(d) ? new Date(d+'T00:00:00') : null;
+      const wd = parsedDate ? WEEKDAYS_TH[parsedDate.getDay()].replace('วัน','') : '?';
+      const badge = info.status==='completed' ? '<span class="pill completed" style="padding:3px 9px;font-size:11px;">จบแล้ว</span>' : '<span class="pill open" style="padding:3px 9px;font-size:11px;">ยังไม่จบ</span>';
+      return `<div class="hist-row" data-day="${escapeHtml(d)}" tabindex="0" role="button" aria-label="ดูรายละเอียดวันที่ ${parseInt(dd,10)} ${MONTHS_TH[mo-1]} ${y+543}">
+        <div><div class="d">${parseInt(dd,10)} ${MONTHS_TH[mo-1]} ${y+543}</div><div class="wd">${wd}</div></div>
+        <div class="cnt">${acts.length} กิจกรรม</div>
+        <div>${badge}</div>
+        <div style="color:var(--text-soft);">›</div>
+      </div>`;
+    }).join('');
+    return `<div class="month-group"><div class="month-title">${MONTHS_TH[mo-1]} ${y+543}</div>${rows}</div>`;
+  }).join('');
+
+  container.querySelectorAll('.hist-row').forEach(row=>{
+    const openDay = ()=>{
+      currentDay = row.dataset.day;
+      document.getElementById('dayPicker').value = currentDay;
+      document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
+      document.querySelector('.nav button[data-view="today"]').classList.add('active');
+      document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+      document.getElementById('view-today').classList.add('active');
+      renderToday();
+    };
+    row.addEventListener('click', openDay);
+    row.addEventListener('keydown', (e)=>{
+      if(e.key==='Enter' || e.key===' '){ e.preventDefault(); openDay(); }
+    });
+  });
+}
+document.getElementById('historySearch').addEventListener('input', renderHistory);
+historyCategorySelect.addEventListener('change', renderHistory);
+
+/* ============================================================
+   8. STATS VIEW
+   ============================================================ */
+/* หมวดที่ไม่รู้จัก (เช่นหลุดมาจากไฟล์ import ที่มี category แปลกๆ) เดิมถูกนับรวมในยอดรวม (hero) แต่ไม่ขึ้น
+   ในกราฟ breakdown/trend และฮีทแมปจับไปกอง 'other' ซึ่งไม่ตรงกับยอดจริง — normalize ให้เป็น 'other'
+   ตั้งแต่ต้นทาง (จุดเดียว ใช้ร่วมกันทุกที่ที่รวมยอดตาม category) เพื่อให้ยอดตรงกันทุกที่ */
+function normalizeCategoryKey(cat){
+  return CATEGORY_ORDER.includes(cat) ? cat : 'other';
+}
+
+function renderStats(){
+  const totalDays = Object.keys(appData.days).length;
+  const completedDays = Object.values(appData.days).filter(d=>d.status==='completed').length;
+  const totalActivities = appData.activities.filter(a=>!a.isMilestone).length;
+  const totalPages = appData.activities.reduce((s,a)=>s+(a.isMilestone?0:(a.pages||0)),0);
+
+  const catTotals = {};
+  appData.activities.forEach(a=>{
+    if(a.isMilestone || !a.durationMinutes) return;
+    const key = normalizeCategoryKey(a.category);
+    catTotals[key] = (catTotals[key]||0) + a.durationMinutes;
+  });
+  const totalTrackedMinutes = Object.values(catTotals).reduce((s,v)=>s+v,0);
+  const completedPct = totalDays ? Math.round(completedDays/totalDays*100) : 0;
+
+  document.getElementById('statHero').innerHTML = `
+    <div class="hero-figure">
+      <div class="hero-num">${fmtDur(totalTrackedMinutes) || '0 นาที'}</div>
+      <div class="hero-lbl">เวลาที่บันทึกไว้ทั้งหมด จากทุกหมวดหมู่</div>
+    </div>
+    <div class="hero-side">
+      <div class="mini">
+        <div class="mini-num">${totalDays ? fmtDur(Math.round(totalTrackedMinutes/totalDays)) : '–'}</div>
+        <div class="mini-lbl">เฉลี่ยต่อวันที่บันทึก</div>
+      </div>
+      <div class="mini">
+        <div class="mini-num">${totalDays ? completedPct+'%' : '–'}</div>
+        <div class="mini-lbl">อัตราวันที่จบ Timeline</div>
+      </div>
+    </div>`;
+
+  document.getElementById('statGrid').innerHTML = [
+    [totalDays,'จำนวนวันที่บันทึก'],
+    [completedDays,'จำนวนวันที่จบ Timeline'],
+    [totalActivities,'จำนวนกิจกรรมสำคัญทั้งหมด'],
+    [totalPages,'จำนวนหน้าที่อ่านรวม'],
+  ].map(([num,lbl])=>`<div class="stat-card"><div class="num">${num.toLocaleString('th-TH')}</div><div class="lbl">${lbl}</div></div>`).join('');
+
+  const catRows = CATEGORY_ORDER
+    .filter(k=>catTotals[k])
+    .sort((a,b)=>catTotals[b]-catTotals[a])
+    .map(k=>{
+      const val = catTotals[k];
+      const pct = totalTrackedMinutes ? Math.round(val/totalTrackedMinutes*100) : 0;
+      const color = CATEGORY_COLORS[k] || '#8B939C';
+      return `<div class="cat-bar-row">
+        <div class="cat-bar-head">
+          <span class="cat-bar-name"><span class="cat-dot" style="background:${color}"></span>${CATEGORY_LABEL[k]}</span>
+          <span class="cat-bar-value"><b>${fmtDur(val)}</b><span class="cat-bar-pct">${pct}%</span></span>
+        </div>
+        <div class="cat-bar-track"><div class="cat-bar-fill" style="width:${pct}%;background:${color}"></div></div>
+      </div>`;
+    }).join('');
+  document.getElementById('catStats').innerHTML = catRows || `<span class="empty-inline">ยังไม่มีข้อมูลเวลาแยกตามหมวดหมู่</span>`;
+
+  renderStreak();
+  renderSleepStats();
+  renderTrendChart();
+  renderHeatmap();
+  renderYearMap();
+}
+
+/* ---- Goals modal: ตั้งเป้าหมายต่อหมวดหมู่ (นาที/วัน ทุกหมวด ยกเว้น "อ่านหนังสือ" เลือกได้ นาที/หน้า) ---- */
+const goalsOverlay = document.getElementById('goalsOverlay');
+
+function openGoalsModal(){
+  document.getElementById('goalsFieldList').innerHTML = DURATION_CATEGORIES.map(cat=>{
+    const goal = appData.goals[cat.value];
+    const targetVal = goal ? goal.target : '';
+    const unit = (goal && goal.unit) || (cat.value==='reading' ? 'pages' : 'minutes');
+    const unitControl = cat.value==='reading'
+      ? `<select class="goal-unit-select">
+          <option value="minutes"${unit==='minutes'?' selected':''}>นาที/วัน</option>
+          <option value="pages"${unit==='pages'?' selected':''}>หน้า/วัน</option>
+        </select>`
+      : `<div class="goal-unit-fixed">นาที/วัน</div>`;
+    return `<div class="field goal-field" data-category="${cat.value}">
+      <label>${cat.label}</label>
+      <div class="row2">
+        <input type="number" min="0" step="1" class="goal-target-input" placeholder="0 = ไม่ตั้งเป้า" value="${targetVal}">
+        ${unitControl}
+      </div>
+    </div>`;
+  }).join('');
+  goalsOverlay.classList.add('active');
+}
+function closeGoalsModal(){ goalsOverlay.classList.remove('active'); }
+
+document.getElementById('btnSetGoals').addEventListener('click', openGoalsModal);
+document.getElementById('btnGoalsCancel').addEventListener('click', closeGoalsModal);
+goalsOverlay.addEventListener('click', (e)=>{ if(e.target===goalsOverlay) closeGoalsModal(); });
+document.getElementById('btnGoalsSave').addEventListener('click', ()=>{
+  const newGoals = {};
+  document.querySelectorAll('#goalsFieldList .goal-field').forEach(row=>{
+    const cat = row.dataset.category;
+    const targetVal = parseInt(row.querySelector('.goal-target-input').value, 10);
+    if(!targetVal || targetVal<=0) return; // 0 หรือว่าง = ไม่ตั้งเป้าหมวดนี้
+    const unitSelect = row.querySelector('.goal-unit-select');
+    newGoals[cat] = { unit: unitSelect ? unitSelect.value : 'minutes', target: targetVal };
+  });
+  appData.goals = newGoals;
+  scheduleSave();
+  closeGoalsModal();
+  renderStreak();
+  renderTodayGoals();
+  showToast('บันทึกเป้าหมายแล้ว');
+});
+
+/* สถิติการนอน — ใช้ milestone "ตื่น"/"นอน" ที่มีอยู่แล้วในระบบแต่ยังไม่เคยถูกใช้คำนวณอะไรเลย
+   จุดที่ต้องระวัง: เวลาเข้านอนมักอยู่รอบเที่ยงคืน (เช่น 23:00 กับ 00:30) ถ้าเฉลี่ยแบบธรรมดาจะได้ค่าประหลาด
+   (เฉลี่ย 23:00 กับ 01:00 แบบตรงๆ ได้เที่ยงวัน ทั้งที่ควรได้ประมาณเที่ยงคืน) จึงต้องใช้ circular mean/std
+   (เฉลี่ยเชิงมุมบนวงกลม 24 ชม.) แทนการเฉลี่ยเลขนาทีตรงๆ */
+function circularAvgMinutes(mins){
+  if(mins.length===0) return null;
+  let sumSin=0,sumCos=0;
+  mins.forEach(m=>{ const a=(m/1440)*2*Math.PI; sumSin+=Math.sin(a); sumCos+=Math.cos(a); });
+  let avgAngle = Math.atan2(sumSin/mins.length, sumCos/mins.length);
+  if(avgAngle<0) avgAngle += 2*Math.PI;
+  return Math.round((avgAngle/(2*Math.PI))*1440);
+}
+function circularStdMinutes(mins){
+  if(mins.length<2) return null;
+  let sumSin=0,sumCos=0;
+  mins.forEach(m=>{ const a=(m/1440)*2*Math.PI; sumSin+=Math.sin(a); sumCos+=Math.cos(a); });
+  const R = Math.sqrt(sumSin*sumSin+sumCos*sumCos)/mins.length;
+  if(R<=0) return null;
+  const stdAngle = Math.sqrt(Math.max(0,-2*Math.log(R)));
+  return Math.round((stdAngle/(2*Math.PI))*1440);
+}
+function minutesToHM(mins){
+  if(mins==null) return '—';
+  const h = Math.floor(mins/60)%24, m = ((mins%60)+60)%60;
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+}
+function computeSleepStats(){
+  const wakeByDay = {}, sleepByDay = {};
+  appData.activities.forEach(a=>{
+    if(!a.isMilestone) return;
+    if(a.category==='wake'){
+      if(!wakeByDay[a.timelineDay] || a.startISO < wakeByDay[a.timelineDay].startISO) wakeByDay[a.timelineDay] = a;
+    } else if(a.category==='sleep'){
+      if(!sleepByDay[a.timelineDay] || a.startISO > sleepByDay[a.timelineDay].startISO) sleepByDay[a.timelineDay] = a;
+    }
+  });
+  const wakeMins = [], sleepMins = [], sleepDurationsHr = [];
+  Object.keys(wakeByDay).forEach(d=>{
+    const dt = new Date(wakeByDay[d].startISO);
+    wakeMins.push(dt.getHours()*60+dt.getMinutes());
+  });
+  Object.keys(sleepByDay).forEach(d=>{
+    const dt = new Date(sleepByDay[d].startISO);
+    sleepMins.push(dt.getHours()*60+dt.getMinutes());
+    const nextDay = addDaysToDateStr(d,1);
+    if(wakeByDay[nextDay]){
+      const hrs = (new Date(wakeByDay[nextDay].startISO) - dt)/3600000;
+      if(hrs>0 && hrs<16) sleepDurationsHr.push(hrs); // กรองค่าผิดปกติ (>16 ชม. น่าจะเป็นข้อมูลผิด ไม่ใช่นอนจริง)
+    }
+  });
+  return {
+    avgWake: circularAvgMinutes(wakeMins),
+    avgSleep: circularAvgMinutes(sleepMins),
+    wakeConsistency: circularStdMinutes(wakeMins),
+    avgSleepHours: sleepDurationsHr.length ? sleepDurationsHr.reduce((s,x)=>s+x,0)/sleepDurationsHr.length : null,
+    sampleDays: Math.max(wakeMins.length, sleepMins.length),
+  };
+}
+function renderSleepStats(){
+  const s = computeSleepStats();
+  const grid = document.getElementById('sleepStatsGrid');
+  if(s.sampleDays===0){
+    grid.innerHTML = `<div class="stat-card" style="grid-column:1/-1;"><span class="empty-inline">ยังไม่มีข้อมูล milestone "ตื่น"/"นอน" ให้คำนวณสถิติการนอน</span></div>`;
+    return;
+  }
+  grid.innerHTML = [
+    [minutesToHM(s.avgWake), 'เวลาตื่นเฉลี่ย'],
+    [minutesToHM(s.avgSleep), 'เวลาเข้านอนเฉลี่ย'],
+    [s.avgSleepHours!=null ? s.avgSleepHours.toFixed(1)+' ชม.' : '—', 'ชั่วโมงนอนเฉลี่ย'],
+    [s.wakeConsistency!=null ? '± '+s.wakeConsistency+' นาที' : '—', 'ความสม่ำเสมอของเวลาตื่น'],
+  ].map(([num,lbl])=>`<div class="stat-card"><div class="num">${num}</div><div class="lbl">${lbl}</div></div>`).join('');
+}
+
+/* หา current/longest streak จากลิสต์วันที่ (YYYY-MM-DD, sort แล้ว) ที่ "ทำสำเร็จ" ตามเงื่อนไขใดเงื่อนไขหนึ่ง
+   ใช้ร่วมกันทั้งกับ "วันที่มีบันทึก" (logStreak) และ "วันที่ถึงเป้า" (goalStreak) */
+function streakFromDates(dates){
+  let longest=0, run=0, prev=null;
+  dates.forEach(ds=>{
+    if(prev){
+      const diff = Math.round((new Date(ds+'T00:00:00')-new Date(prev+'T00:00:00'))/86400000);
+      run = diff===1 ? run+1 : 1;
+    } else run=1;
+    longest = Math.max(longest, run);
+    prev = ds;
+  });
+  const today = todayStr(), yesterday = addDaysToDateStr(today,-1);
+  const last = dates.length ? dates[dates.length-1] : null;
+  let current = 0;
+  if(last===today || last===yesterday){
+    let cursor=null;
+    for(let i=dates.length-1;i>=0;i--){
+      const ds = dates[i];
+      if(cursor){
+        const diff = Math.round((new Date(cursor+'T00:00:00')-new Date(ds+'T00:00:00'))/86400000);
+        if(diff!==1) break;
+      }
+      current++; cursor=ds;
+    }
+  }
+  return { current, longest: Math.max(longest,current) };
+}
+
+/* คำนวณ streak ของ "หมวดหมู่กิจกรรม" หนึ่งตัว (เช่น อ่านหนังสือ, เรียนคอร์ส) แทนการอิงสถานะ "จบ Timeline"
+   ของทั้งวัน — logStreak: วันที่มี activity อย่างน้อย 1 รายการของ category นั้น (เหมือนเดิม)
+   goalStreak (ถ้าตั้งเป้าไว้): วันที่ผลรวมของ category นั้นถึงเป้าที่ตั้งไว้ (appData.goals) */
+function computeCategoryStreak(category){
+  const logDates = new Set();
+  appData.activities.forEach(a=>{ if(a.category===category) logDates.add(a.timelineDay); });
+  const totalCount = appData.activities.filter(a=>a.category===category).length;
+  const logStreak = streakFromDates(Array.from(logDates).sort());
+
+  const goal = appData.goals[category] || null;
+  let goalStreak = null;
+  if(goal){
+    const sums = {};
+    appData.activities.forEach(a=>{
+      if(a.category!==category || a.isMilestone) return;
+      const v = goal.unit==='pages' ? (a.pages||0) : (a.durationMinutes||0);
+      sums[a.timelineDay] = (sums[a.timelineDay]||0) + v;
+    });
+    const goalDates = Object.entries(sums).filter(([,v])=>v>=goal.target).map(([d])=>d).sort();
+    goalStreak = streakFromDates(goalDates);
+  }
+
+  return { category, totalCount, logStreak, goalStreak, goal };
+}
+
+/* การ์ดสตรีคแยกตามหมวดหมู่กิจกรรม (ไม่อิงสถานะ "จบ Timeline" ของวันอีกต่อไป)
+   โชว์เฉพาะ category ที่บันทึกสะสมมาแล้ว >= STREAK_MIN_COUNT ครั้ง เรียงจาก current streak มากไปน้อย
+   (ถ้ามีเป้าหมาย ใช้ goalStreak.current เป็นหลักในการเรียง/ไฮไลต์แทน logStreak.current)
+   ถ้าไม่มี category ไหนถึงเกณฑ์เลย ให้ fallback โชว์ 2 อันดับแรกที่ current streak สูงสุด (จากที่มีข้อมูลจริง) แทน */
+function renderStreak(){
+  const durationCats = CATEGORY_ORDER.filter(c=>c!=='wake' && c!=='sleep' && c!=='milestone_other');
+  let stats = durationCats.map(computeCategoryStreak).filter(s=>s.totalCount>0);
+  const sortKey = s => s.goalStreak ? s.goalStreak.current : s.logStreak.current;
+  const longestKey = s => s.goalStreak ? s.goalStreak.longest : s.logStreak.longest;
+
+  let shown = stats.filter(s=>s.totalCount>=STREAK_MIN_COUNT);
+  let fallback = false;
+  if(shown.length===0 && stats.length>0){
+    fallback = true;
+    shown = [...stats].sort((a,b)=> sortKey(b)-sortKey(a) || longestKey(b)-longestKey(a)).slice(0,2);
+  } else {
+    shown.sort((a,b)=> sortKey(b)-sortKey(a) || longestKey(b)-longestKey(a));
+  }
+
+  const box = document.getElementById('streakBox');
+  if(shown.length===0){
+    box.innerHTML = `<div class="streak-empty">ยังไม่มีข้อมูลกิจกรรมมากพอที่จะคำนวณสตรีค</div>`;
+    return;
+  }
+
+  const cards = shown.map((s,i)=>{
+    const color = CATEGORY_COLORS[s.category] || '#8B939C';
+    const label = CATEGORY_LABEL[s.category] || s.category;
+    const rankCls = (i===0 && sortKey(s)>0) ? ' rank-1' : '';
+
+    if(s.goal && s.goalStreak){
+      const unitLabel = s.goal.unit==='pages' ? 'หน้า/วัน' : 'นาที/วัน';
+      return `<div class="streak-card${rankCls}">
+        <div class="streak-card-cat">
+          <span><span class="streak-card-dot" style="background:${color}"></span>${label}</span>
+          <span class="streak-goal-badge">🎯 ≥${s.goal.target.toLocaleString('th-TH')} ${unitLabel}</span>
+        </div>
+        <div class="streak-num-row">
+          <div class="streak-num-block">
+            <div class="streak-num">${s.goalStreak.current.toLocaleString('th-TH')}</div>
+            <div class="streak-lbl">ถึงเป้าติดต่อกัน</div>
+          </div>
+          <div class="streak-num-block secondary">
+            <div class="streak-num-sm">${s.logStreak.current.toLocaleString('th-TH')}</div>
+            <div class="streak-lbl">มีบันทึกติดต่อกัน</div>
+          </div>
+        </div>
+        <div class="streak-sub">สถิติสูงสุด <b>${s.goalStreak.longest.toLocaleString('th-TH')}</b> วัน (ถึงเป้า) · บันทึกแล้ว ${s.totalCount.toLocaleString('th-TH')} ครั้ง</div>
+      </div>`;
+    }
+
+    return `<div class="streak-card${rankCls}">
+      <div class="streak-card-cat"><span class="streak-card-dot" style="background:${color}"></span>${label}</div>
+      <div class="streak-num">${s.logStreak.current.toLocaleString('th-TH')}</div>
+      <div class="streak-lbl">วันติดต่อกันล่าสุด</div>
+      <div class="streak-sub">สถิติสูงสุด <b>${s.logStreak.longest.toLocaleString('th-TH')}</b> วัน · บันทึกแล้ว ${s.totalCount.toLocaleString('th-TH')} ครั้ง</div>
+    </div>`;
+  }).join('');
+
+  box.innerHTML = `<div class="streak-grid">${cards}</div>` +
+    (fallback ? `<div class="streak-caption">ยังไม่มีหมวดหมู่ไหนบันทึกครบ ${STREAK_MIN_COUNT} ครั้ง — แสดง 2 อันดับที่สตรีคสูงสุดไปก่อน</div>` : '');
+}
+
+/* ป้ายกำกับช่วงเวลาที่เลือกได้สำหรับกราฟ trend และฮีทแมป (คุมร่วมกันด้วยตัวแปรเดียว) */
+const RANGE_LABELS = { 7:'7 วันล่าสุด', 30:'30 วันล่าสุด', 90:'90 วันล่าสุด', all:'ทั้งหมด (รายสัปดาห์)' };
+let trendRangeKey = 30; // 7 | 30 | 90 | 'all'
+
+/* ชุดวันที่ (YYYY-MM-DD) ของ N วันล่าสุดนับรวมวันนี้ หรือ null ถ้าเป็น 'all' (ไม่กรองช่วง) */
+function rangeDateSet(rangeKey){
+  if(rangeKey === 'all') return null;
+  const today = new Date();
+  const set = new Set();
+  for(let i=rangeKey-1;i>=0;i--){
+    const d = new Date(today.getFullYear(), today.getMonth(), today.getDate()-i);
+    set.add(dateStrOf(d));
+  }
+  return set;
+}
+
+/* กิจกรรมที่มี duration ทั้งหมดภายในช่วงที่เลือก (อิง timelineDay) — ใช้ร่วมกันโดยฮีทแมป */
+function activitiesInRange(rangeKey){
+  const base = appData.activities.filter(a=>!a.isMilestone && a.durationMinutes);
+  if(rangeKey === 'all') return base;
+  const set = rangeDateSet(rangeKey);
+  return base.filter(a=>set.has(a.timelineDay));
+}
+
+/* รวม durationMinutes ต่อ category ในช่วงวันที่ [startDateStr, endDateStr] แบบรวมขอบ (อิง timelineDay)
+   ใช้สำหรับเทียบกับ "ช่วงก่อนหน้า" ในกราฟ trend */
+function sumCategoryDurationsInRange(startDateStr, endDateStr){
+  const sums = {};
+  appData.activities.forEach(a=>{
+    if(a.isMilestone || !a.durationMinutes) return;
+    if(a.timelineDay < startDateStr || a.timelineDay > endDateStr) return;
+    const cat = normalizeCategoryKey(a.category);
+    sums[cat] = (sums[cat]||0) + a.durationMinutes;
+  });
+  return sums;
+}
+
+/* แบ่งช่วงเวลาที่เลือกเป็น "แท่ง" สำหรับกราฟ trend — ช่วง 7/30/90 วัน แบ่งเป็นรายวันเหมือนเดิม
+   ส่วน 'ทั้งหมด' แบ่งเป็นรายสัปดาห์ (เริ่มวันจันทร์) ตั้งแต่ข้อมูลแรกสุดจนถึงวันนี้ กันไม่ให้มีแท่งเยอะเกินไป */
+function buildTrendBuckets(rangeKey){
+  const today = new Date();
+
+  if(rangeKey !== 'all'){
+    const days = [];
+    for(let i=rangeKey-1;i>=0;i--){
+      const d = new Date(today.getFullYear(), today.getMonth(), today.getDate()-i);
+      const ds = dateStrOf(d);
+      days.push({ date: ds, rangeEndDate: ds, totals: {} });
+    }
+    const byDate = {};
+    days.forEach(r=>{ byDate[r.date] = r.totals; });
+    appData.activities.forEach(a=>{
+      if(a.isMilestone || !a.durationMinutes) return;
+      const totals = byDate[a.timelineDay];
+      if(!totals) return;
+      const cat = normalizeCategoryKey(a.category);
+      totals[cat] = (totals[cat]||0) + a.durationMinutes;
+    });
+    return { buckets: days, unit:'day' };
+  }
+
+  const knownDates = Object.keys(appData.days).concat(appData.activities.map(a=>a.timelineDay)).filter(Boolean).sort();
+  if(!knownDates.length){
+    const ds = todayStr();
+    return { buckets: [{ date: ds, rangeEndDate: ds, totals: {} }], unit:'day' };
+  }
+  const [ey,em,ed] = knownDates[0].split('-').map(Number);
+  let cursor = new Date(ey, em-1, ed);
+  const dow = (cursor.getDay()+6)%7; // 0 = จันทร์
+  cursor = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate()-dow);
+  const endBoundary = new Date(today.getFullYear(), today.getMonth(), today.getDate()+1);
+
+  const weeks = [];
+  let guard = 0;
+  while(cursor < endBoundary && guard < 600){
+    const memberDates = [];
+    for(let k=0;k<7;k++){
+      const d = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate()+k);
+      memberDates.push(dateStrOf(d));
+    }
+    weeks.push({ date: memberDates[0], rangeEndDate: memberDates[6], totals: {}, _memberDates: memberDates });
+    cursor = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate()+7);
+    guard++;
+  }
+  const byDate = {};
+  weeks.forEach(w=> w._memberDates.forEach(ds=>{ byDate[ds] = w.totals; }));
+  appData.activities.forEach(a=>{
+    if(a.isMilestone || !a.durationMinutes) return;
+    const totals = byDate[a.timelineDay];
+    if(!totals) return;
+    const cat = normalizeCategoryKey(a.category);
+    totals[cat] = (totals[cat]||0) + a.durationMinutes;
+  });
+  weeks.forEach(w=>{ delete w._memberDates; });
+  return { buckets: weeks, unit:'week' };
+}
+
+/* เก็บพิกัดของแต่ละแท่ง (x, width, ช่วงวันที่, totals ต่อหมวดหมู่) จากการวาดครั้งล่าสุด
+   ใช้หา hover ใต้ mouse สำหรับ tooltip โดยไม่ต้องคำนวณ layout ซ้ำ */
+let trendBars = [];
+let trendUnit = 'day';
+
+/* วาดกราฟแท่งซ้อน (stacked bar) เวลาแยกตามหมวดหมู่ ตามช่วงที่เลือกอยู่ (trendRangeKey) ด้วย Canvas API ล้วน ๆ
+   พร้อมเทียบเวลารวมของแต่ละหมวดกับช่วงก่อนหน้าที่มีความยาวเท่ากัน (ยกเว้นตอนเลือก 'ทั้งหมด') */
+function renderTrendChart(){
+  document.querySelectorAll('#rangeToggle button').forEach(b=>{
+    b.classList.toggle('active', b.dataset.range === String(trendRangeKey));
+  });
+  document.getElementById('trendTitle').textContent = `แนวโน้มเวลาแยกตามหมวดหมู่ (${RANGE_LABELS[trendRangeKey]})`;
+
+  const canvas = document.getElementById('trendCanvas');
+  if(!canvas) return;
+  const cssW = canvas.clientWidth || canvas.parentElement.clientWidth || 820;
+  const cssH = 220;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.round(cssW*dpr);
+  canvas.height = Math.round(cssH*dpr);
+  canvas.style.height = cssH+'px';
+  const ctx = canvas.getContext('2d');
+  if(!ctx) return;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,cssW,cssH);
+
+  const { buckets: data, unit } = buildTrendBuckets(trendRangeKey);
+  trendUnit = unit;
+  const categories = CATEGORY_ORDER.filter(k=>data.some(d=>d.totals[k]));
+  const maxTotal = Math.max(60, ...data.map(d=>CATEGORY_ORDER.reduce((s,k)=>s+(d.totals[k]||0),0)));
+
+  const padL=54, padR=8, padT=8, padB=22;
+  const chartW = Math.max(10, cssW-padL-padR);
+  const chartH = cssH-padT-padB;
+  const barGap = data.length>60 ? 1 : 3;
+  const barW = Math.max(1, chartW/data.length - barGap);
+
+  ctx.strokeStyle = '#2B3138';
+  ctx.fillStyle = '#9C9686';
+  ctx.font = '11px Sarabun, sans-serif';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  const ySteps = 4;
+  for(let s=0;s<=ySteps;s++){
+    const val = Math.round(maxTotal*s/ySteps);
+    const y = padT+chartH-(chartH*s/ySteps);
+    ctx.beginPath();
+    ctx.moveTo(padL,y); ctx.lineTo(padL+chartW,y);
+    ctx.stroke();
+    ctx.fillText(fmtDurShort(val), padL-6, y);
+  }
+
+  trendBars = [];
+  const catSums = {};
+  const labelEvery = Math.max(1, Math.ceil(data.length/8));
+  data.forEach((d,i)=>{
+    let y0 = padT+chartH;
+    const x = padL + i*(barW+barGap);
+    let dayTotal = 0;
+    categories.forEach(cat=>{
+      const val = d.totals[cat]||0;
+      dayTotal += val;
+      catSums[cat] = (catSums[cat]||0) + val;
+      if(val<=0) return;
+      const h = (val/maxTotal)*chartH;
+      const r = Math.min(2, barW/2, h/2);
+      ctx.fillStyle = CATEGORY_COLORS[cat] || '#8B939C';
+      ctx.beginPath();
+      if(ctx.roundRect) ctx.roundRect(x, y0-h, barW, h, [r,r,0,0]);
+      else ctx.rect(x, y0-h, barW, h);
+      ctx.fill();
+      y0 -= h;
+    });
+    trendBars.push({ x, width:barW, date:d.date, rangeEndDate:d.rangeEndDate, totals:d.totals, total:dayTotal });
+    if(i%labelEvery===0 || i===data.length-1){
+      ctx.save();
+      ctx.fillStyle = '#9C9686';
+      ctx.font = '10px Sarabun, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      const [,mo,dd] = d.date.split('-');
+      ctx.fillText(`${parseInt(dd,10)}/${parseInt(mo,10)}`, x+barW/2, padT+chartH+4);
+      ctx.restore();
+    }
+  });
+
+  let prevSums = null;
+  if(trendRangeKey !== 'all'){
+    const N = trendRangeKey;
+    const today = new Date();
+    const prevEnd = dateStrOf(new Date(today.getFullYear(), today.getMonth(), today.getDate()-N));
+    const prevStart = dateStrOf(new Date(today.getFullYear(), today.getMonth(), today.getDate()-(2*N-1)));
+    prevSums = sumCategoryDurationsInRange(prevStart, prevEnd);
+  }
+
+  document.getElementById('trendLegend').innerHTML = categories.length ? categories.map(k=>{
+    let deltaHtml = '';
+    if(prevSums){
+      const cur = catSums[k]||0, prev = prevSums[k]||0;
+      if(prev>0){
+        const pct = Math.round((cur-prev)/prev*100);
+        const cls = pct>0 ? 'up' : (pct<0 ? 'down' : 'flat');
+        const arrow = pct>0 ? '▲' : (pct<0 ? '▼' : '±');
+        deltaHtml = `<span class="trend-legend-delta ${cls}">${arrow}${Math.abs(pct)}%</span>`;
+      } else if(cur>0){
+        deltaHtml = `<span class="trend-legend-delta flat">ใหม่</span>`;
+      }
+    }
+    return `<span class="trend-legend-item"><span class="trend-legend-dot" style="background:${CATEGORY_COLORS[k]}"></span>${CATEGORY_LABEL[k]}<span class="trend-legend-total">${fmtDur(catSums[k])}</span>${deltaHtml}</span>`;
+  }).join('') : `<span class="empty-inline">ยังไม่มีข้อมูลในช่วงที่เลือก</span>`;
+
+  document.getElementById('trendCompareNote').textContent = (prevSums && categories.length) ? `▲ ▼ เทียบกับ ${trendRangeKey} วันก่อนหน้าช่วงนี้` : '';
+}
+
+/* Hover บนกราฟ trend เพื่อดูรายละเอียดของแท่งนั้น ๆ (ใช้พิกัดจาก trendBars ที่บันทึกไว้ตอนวาด) */
+const trendCanvasEl = document.getElementById('trendCanvas');
+const trendTooltipEl = document.getElementById('trendTooltip');
+function hideTrendTooltip(){ trendTooltipEl.classList.remove('show'); }
+function fmtShortDate(ds){ const [,mo,dd]=ds.split('-'); return `${parseInt(dd,10)}/${parseInt(mo,10)}`; }
+/* แยกออกมาเป็นฟังก์ชันเดียวใช้ร่วมกันระหว่าง mouse และ touch เดิมมีแค่ mousemove
+   ทำให้บนมือถือ (ที่มี layout responsive อยู่แล้ว) hover กราฟไม่ได้เลย */
+function handleTrendHover(clientX, clientY){
+  if(!trendBars.length){ hideTrendTooltip(); return; }
+  const rect = trendCanvasEl.getBoundingClientRect();
+  const mx = clientX - rect.left;
+  const bar = trendBars.find(b=> mx>=b.x && mx<=b.x+b.width);
+  if(!bar){ hideTrendTooltip(); return; }
+
+  const rows = CATEGORY_ORDER.filter(k=>bar.totals[k]).map(k=>
+    `<div class="tt-row"><span class="tt-dot" style="background:${CATEGORY_COLORS[k]}"></span>${CATEGORY_LABEL[k]}<b>${fmtDur(bar.totals[k])}</b></div>`
+  ).join('');
+  const dateLabel = (trendUnit==='week' && bar.rangeEndDate && bar.rangeEndDate!==bar.date)
+    ? `${fmtShortDate(bar.date)} – ${fmtShortDate(bar.rangeEndDate)}`
+    : fmtShortDate(bar.date);
+  trendTooltipEl.innerHTML =
+    `<div class="tt-date">${dateLabel}</div>` +
+    (rows || `<div class="tt-row">ไม่มีข้อมูล</div>`) +
+    (bar.total ? `<div class="tt-total"><span>รวม</span><b>${fmtDur(bar.total)}</b></div>` : '');
+
+  const wrapRect = trendCanvasEl.parentElement.getBoundingClientRect();
+  const cursorX = clientX - wrapRect.left;
+  const tooltipW = trendTooltipEl.offsetWidth || 160;
+  let left = cursorX + 14;
+  if(left + tooltipW > wrapRect.width) left = cursorX - tooltipW - 14;
+  trendTooltipEl.style.left = Math.max(0,left)+'px';
+  trendTooltipEl.style.top = (clientY - wrapRect.top + 14)+'px';
+  trendTooltipEl.classList.add('show');
+}
+trendCanvasEl.addEventListener('mousemove', (e)=> handleTrendHover(e.clientX, e.clientY));
+trendCanvasEl.addEventListener('mouseleave', hideTrendTooltip);
+trendCanvasEl.addEventListener('touchstart', (e)=>{
+  if(e.touches[0]) handleTrendHover(e.touches[0].clientX, e.touches[0].clientY);
+}, {passive:true});
+trendCanvasEl.addEventListener('touchmove', (e)=>{
+  if(e.touches[0]) handleTrendHover(e.touches[0].clientX, e.touches[0].clientY);
+}, {passive:true});
+trendCanvasEl.addEventListener('touchend', hideTrendTooltip);
+
+/* สลับช่วงเวลา (7/30/90/ทั้งหมด) ที่ใช้ร่วมกันโดยกราฟ trend และฮีทแมปด้านล่าง */
+document.getElementById('rangeToggle').addEventListener('click', (e)=>{
+  const btn = e.target.closest('button[data-range]');
+  if(!btn) return;
+  const val = btn.dataset.range;
+  trendRangeKey = (val === 'all') ? 'all' : parseInt(val, 10);
+  renderTrendChart();
+  renderHeatmap();
+});
+
+/* แปลง hex สี (#RRGGBB) เป็น {r,g,b} สำหรับคำนวณความเข้มของสีในฮีทแมป */
+function hexToRgb(hex){
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return m ? { r:parseInt(m[1],16), g:parseInt(m[2],16), b:parseInt(m[3],16) } : { r:139,g:147,b:156 };
+}
+
+/* รวมเวลาที่ใช้ในแต่ละ "ชั่วโมงของวัน" (0-23) แยกตาม category จากกิจกรรมที่ให้มา
+   กิจกรรมที่คร่อมหลายชั่วโมงจะถูกแบ่งสัดส่วนเวลาไปยังแต่ละชั่วโมงตามจริง ไม่ใช่นับรวมที่ชั่วโมงเริ่มต้นอย่างเดียว
+   (กันไม่ให้กิจกรรมยาว ๆ เช่น ทำงาน 8 ชม. ไปกองอยู่ที่ชั่วโมงเริ่มต้นชั่วโมงเดียวอย่างผิดสัดส่วน) */
+function buildHourBuckets(activities){
+  const buckets = {};
+  CATEGORY_ORDER.forEach(k=>{ buckets[k] = new Array(24).fill(0); });
+  activities.forEach(a=>{
+    if(!a.startISO || !a.endISO) return;
+    const cat = normalizeCategoryKey(a.category);
+    let cursor = new Date(a.startISO);
+    const end = new Date(a.endISO);
+    let guard = 0;
+    while(cursor < end && guard < 2000){
+      const hour = cursor.getHours();
+      const nextBoundary = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate(), cursor.getHours()+1, 0, 0, 0);
+      const segEnd = nextBoundary < end ? nextBoundary : end;
+      buckets[cat][hour] += (segEnd - cursor)/60000;
+      cursor = segEnd;
+      guard++;
+    }
+  });
+  return buckets;
+}
+
+/* วาด grid ฮีทแมปช่วงเวลาที่มักทำกิจกรรมแต่ละหมวดหมู่ (0-23 น.) ตามช่วงเดียวกับกราฟ trend (trendRangeKey)
+   ความเข้มของสีในแต่ละแถว normalize เทียบกับชั่วโมงที่ใช้เวลามากที่สุดของหมวดนั้น ๆ เอง เพื่อให้เห็นแพทเทิร์น
+   ของหมวดที่ใช้เวลารวมน้อยได้ชัดเจนเท่า ๆ กับหมวดที่ใช้เวลารวมเยอะ */
+function renderHeatmap(){
+  document.getElementById('heatmapTitle').textContent = `ช่วงเวลาที่มักทำกิจกรรม แยกตามหมวดหมู่ (${RANGE_LABELS[trendRangeKey]})`;
+
+  const activities = activitiesInRange(trendRangeKey);
+  if(!activities.length){
+    document.getElementById('heatmap').innerHTML = `<span class="empty-inline">ยังไม่มีข้อมูลในช่วงที่เลือก</span>`;
+    document.getElementById('heatmapHours').innerHTML = '';
+    return;
+  }
+
+  const buckets = buildHourBuckets(activities);
+  const rowsHtml = CATEGORY_ORDER.map(k=>{
+    const arr = buckets[k];
+    const rowMax = Math.max(...arr);
+    const { r,g,b } = hexToRgb(CATEGORY_COLORS[k] || '#8B939C');
+    const cells = arr.map((mins,h)=>{
+      let bg = 'var(--paper-2)';
+      if(mins>0 && rowMax>0){
+        const alpha = Math.min(1, 0.18 + 0.82*(mins/rowMax));
+        bg = `rgba(${r},${g},${b},${alpha.toFixed(2)})`;
+      }
+      const range = `${pad2(h)}:00–${pad2((h+1)%24)}:00`;
+      const title = mins>0 ? `${CATEGORY_LABEL[k]} — ${range} — ${fmtDur(Math.round(mins))}` : `${CATEGORY_LABEL[k]} — ${range} — ไม่มีข้อมูล`;
+      return `<span class="heatmap-cell" style="background:${bg}" title="${title}"></span>`;
+    }).join('');
+    return `<div class="heatmap-row"><span class="heatmap-row-label">${CATEGORY_LABEL[k]}</span>${cells}</div>`;
+  }).join('');
+  document.getElementById('heatmap').innerHTML = rowsHtml;
+
+  const hourLabels = ['<span></span>'];
+  for(let h=0;h<24;h++) hourLabels.push(`<span>${h%3===0 ? h : ''}</span>`);
+  document.getElementById('heatmapHours').innerHTML = hourLabels.join('');
+}
+
+/* ---- Yearly contribution graph ----
+   รวม durationMinutes ทุกหมวดต่อ timelineDay (ไม่แยกสี เพราะ 371 ช่องจะรกเกิน — ดูแค่ "สม่ำเสมอแค่ไหน")
+   คอลัมน์ = สัปดาห์ (เริ่มวันจันทร์ ตรงกับกราฟ trend) คอลัมน์ขวาสุด = สัปดาห์ปัจจุบัน */
+const MONTHS_TH_SHORT = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const YEARMAP_WEEKS = 53;
+
+/* แปลงยอดนาทีเป็นระดับ 0-4: 0 = ไม่มีข้อมูล, 1-4 ตามควอร์ไทล์ของวันที่มีข้อมูล (ทนต่อวันโหดๆ ที่ยาวผิดปกติ
+   ได้ดีกว่าเทียบกับค่าสูงสุดตรงๆ) ถ้ามีวันที่มีข้อมูลน้อยกว่า 4 วันใช้สัดส่วนเทียบค่าสูงสุดแทน */
+function makeYearLevelFn(values){
+  const sorted = values.filter(v=>v>0).sort((a,b)=>a-b);
+  if(sorted.length===0) return ()=>0;
+  if(sorted.length<4){
+    const max = sorted[sorted.length-1];
+    return v=> v<=0 ? 0 : Math.min(4, Math.max(1, Math.ceil(v/max*4)));
+  }
+  const q = p=> sorted[Math.min(sorted.length-1, Math.floor(sorted.length*p))];
+  const q1=q(0.25), q2=q(0.5), q3=q(0.75);
+  return v=> v<=0 ? 0 : (v<=q1 ? 1 : v<=q2 ? 2 : v<=q3 ? 3 : 4);
+}
+
+function renderYearMap(){
+  const box = document.getElementById('yearMap');
+  const foot = document.getElementById('yearMapFoot');
+
+  const today = todayStr();
+  const [ty,tm,td] = today.split('-').map(Number);
+  const dowToday = (new Date(ty,tm-1,td).getDay()+6)%7; // 0 = จันทร์
+  const startStr = addDaysToDateStr(today, -(dowToday + (YEARMAP_WEEKS-1)*7));
+
+  const perDay = {};
+  appData.activities.forEach(a=>{
+    if(a.isMilestone || !a.durationMinutes) return;
+    if(a.timelineDay < startStr || a.timelineDay > today) return;
+    perDay[a.timelineDay] = (perDay[a.timelineDay]||0) + a.durationMinutes;
+  });
+  const levelOf = makeYearLevelFn(Object.values(perDay));
+
+  const cssAccent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+  const { r,g,b } = hexToRgb(cssAccent || '#4FA595');
+  const ALPHAS = [0, 0.28, 0.5, 0.75, 1];
+  const levelBg = lv => lv===0 ? 'var(--paper-2)' : `rgba(${r},${g},${b},${ALPHAS[lv]})`;
+
+  const cells = [];
+  const monthLabels = []; // {col, text}
+  let prevMonth = -1;
+  const dowLabels = {0:'จ.', 2:'พ.', 4:'ศ.'};
+  for(let d=0; d<7; d++){
+    if(dowLabels[d]) cells.push(`<span class="yearmap-dow" style="grid-column:1;grid-row:${d+2}">${dowLabels[d]}</span>`);
+  }
+
+  let activeDays = 0, totalMinutes = 0;
+  for(let w=0; w<YEARMAP_WEEKS; w++){
+    const mondayStr = addDaysToDateStr(startStr, w*7);
+    const monthIdx = Number(mondayStr.split('-')[1]) - 1;
+    if(monthIdx!==prevMonth){
+      // ป้ายเดือนที่ชิดกันเกิน (เช่นเดือนแรกที่เหลือไม่ถึง 3 สัปดาห์) ตัดป้ายก่อนหน้าทิ้งกันทับกัน
+      if(monthLabels.length && (w - monthLabels[monthLabels.length-1].col) < 3) monthLabels.pop();
+      monthLabels.push({ col:w, text:MONTHS_TH_SHORT[monthIdx] });
+      prevMonth = monthIdx;
+    }
+    for(let d=0; d<7; d++){
+      const ds = addDaysToDateStr(mondayStr, d);
+      if(ds > today) continue; // วันในอนาคตไม่วาดช่อง
+      const mins = perDay[ds] || 0;
+      if(mins>0){ activeDays++; totalMinutes += mins; }
+      const title = mins>0 ? `${weekdayLabel(ds)} — ${fmtDur(mins)}` : `${weekdayLabel(ds)} — ไม่มีข้อมูล`;
+      cells.push(`<span class="yearmap-cell" style="grid-column:${w+2};grid-row:${d+2};background:${levelBg(levelOf(mins))}" title="${title}"></span>`);
+    }
+  }
+  const monthHtml = monthLabels.map(m=>`<span class="yearmap-month" style="grid-column:${m.col+2};grid-row:1">${m.text}</span>`).join('');
+  box.innerHTML = `<div class="yearmap-grid">${monthHtml}${cells.join('')}</div>`;
+
+  const totalDaysWindow = (YEARMAP_WEEKS-1)*7 + dowToday + 1;
+  const legend = [0,1,2,3,4].map(lv=>`<span class="yearmap-cell" style="background:${levelBg(lv)}"></span>`).join('');
+  foot.innerHTML = `<span>มีบันทึก <b style="color:var(--text)">${activeDays.toLocaleString('th-TH')}</b> จาก ${totalDaysWindow.toLocaleString('th-TH')} วัน · รวม ${fmtDur(totalMinutes) || '0 นาที'}</span>
+    <span class="yearmap-legend">น้อย ${legend} มาก</span>`;
+}
+
+/* re-render กราฟ trend ตอนย่อ/ขยายหน้าต่าง ถ้าตอนนั้นเปิดแท็บ Stats อยู่ (debounce กันยิงถี่เกินไป) */
+let trendResizeTimer = null;
+window.addEventListener('resize', ()=>{
+  clearTimeout(trendResizeTimer);
+  trendResizeTimer = setTimeout(()=>{
+    if(document.getElementById('view-stats').classList.contains('active')) renderTrendChart();
+  }, 150);
+});
+
+/* ============================================================
+   9. EXPORT / BACKUP / IMPORT
+   ============================================================ */
+/* ใช้ร่วมกันระหว่าง btnExport / btnBackupDb — ต่างกันแค่ prefix ชื่อไฟล์กับข้อความ toast */
+async function exportData(prefix, toastMsg){
+  const blob = new Blob([JSON.stringify(appData,null,2)], {type:'application/json'});
+  const name = `${prefix}-${todayStr()}.json`;
+  if(hasFSAccess){
+    try{
+      const handle = await window.showSaveFilePicker({
+        suggestedName: name,
+        types:[{description:'Timeline data', accept:{'application/json':['.json']}}]
+      });
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      showToast(toastMsg);
+      return;
+    }catch(e){ if(e.name==='AbortError') return; }
+  }
+  downloadBlob(blob, name);
+  showToast(toastMsg);
+}
+
+document.getElementById('btnExport').addEventListener('click', ()=>{
+  exportData('timeline-export', 'Export ข้อมูลแล้ว');
+});
+document.getElementById('btnBackupDb').addEventListener('click', ()=>{
+  exportData('timeline-backup', 'สำรองข้อมูลแล้ว');
+});
+
+/* escape comma/newline/quote ตามกติกา CSV มาตรฐาน
+   และกัน formula injection: ถ้าค่าขึ้นต้นด้วย =, +, -, @ (ตัวเปิดสูตรใน Excel/Google Sheets)
+   ให้ prefix ด้วย ' ก่อน escape ปกติ เพื่อให้โปรแกรม spreadsheet อ่านเป็นข้อความเฉยๆ ไม่รันเป็นสูตร */
+function csvEscape(val){
+  let s = (val==null) ? '' : String(val);
+  if(/^[=+\-@]/.test(s)) s = "'" + s;
+  if(/[",\r\n]/.test(s)) return '"' + s.replace(/"/g,'""') + '"';
+  return s;
+}
+function localDateTimeStr(iso){
+  if(!iso) return '';
+  const d = new Date(iso);
+  return `${dateStrOf(d)} ${fmtHM(d)}`;
+}
+function activitiesToCSV(activities){
+  // เพิ่ม categoryLabel (ชื่อหมวดหมู่ภาษาไทย แทนที่จะมีแค่ key ภาษาอังกฤษ) และ startLocal/endLocal
+  // (วันเวลาตามเขตเวลาเครื่อง อ่านง่ายกว่า startISO/endISO ที่เป็น UTC ซึ่งคลาดจากเวลาจริง 7 ชม.)
+  const headers = ['id','timelineDay','category','categoryLabel','isMilestone','startTime','startISO','startLocal','endTime','endISO','endLocal','durationMinutes','pages','detail'];
+  const rows = [headers.join(',')];
+  activities.forEach(a=>{
+    const row = Object.assign({}, a, {
+      categoryLabel: CATEGORY_LABEL[a.category] || a.category || '',
+      startLocal: localDateTimeStr(a.startISO),
+      endLocal: localDateTimeStr(a.endISO),
+    });
+    rows.push(headers.map(h=>csvEscape(row[h])).join(','));
+  });
+  return rows.join('\r\n');
+}
+document.getElementById('btnExportCsv').addEventListener('click', ()=>{
+  // ใส่ UTF-8 BOM (\uFEFF) นำหน้า กัน Excel เดาผิดเป็น ANSI แล้วอ่านภาษาไทยเพี้ยน
+  const csv = '\uFEFF' + activitiesToCSV(appData.activities);
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  downloadBlob(blob, `timeline-activities-${todayStr()}.csv`);
+  showToast('ดาวน์โหลดไฟล์ CSV แล้ว');
+});
+
+document.getElementById('btnRecoverBackup').addEventListener('click', async ()=>{
+  const backups = await getAllLocalBackups();
+  if(backups.length===0){ alert('ไม่พบข้อมูล backup ในเบราว์เซอร์นี้'); return; }
+  // แสดงทุก slot ให้เลือก (ไม่ใช่แค่ตัวล่าสุด) เผื่อ slot ล่าสุดพังหรือไม่ใช่อันที่ต้องการ
+  const listText = backups.map((b,i)=>{
+    const label = b.savedAt ? new Date(b.savedAt).toLocaleString('th-TH') : 'ไม่ทราบเวลา (backup รูปแบบเก่า)';
+    const count = (b.data && Array.isArray(b.data.activities)) ? b.data.activities.length : '?';
+    return `${i+1}. บันทึกเมื่อ ${label} — ${count} กิจกรรม`;
+  }).join('\n');
+  const choice = prompt(`พบ backup ${backups.length} ชุดในเบราว์เซอร์นี้ พิมพ์หมายเลขที่ต้องการกู้คืน:\n\n${listText}`, '1');
+  if(choice==null) return;
+  const idx = parseInt(choice,10)-1;
+  if(isNaN(idx) || idx<0 || idx>=backups.length){ alert('หมายเลขไม่ถูกต้อง'); return; }
+  const backup = backups[idx].data;
+  if(!backup || !Array.isArray(backup.activities)){ alert('ไฟล์ backup ไม่ถูกต้อง'); return; }
+  if(!confirm(`ต้องการโหลด backup ที่เลือกมาแทนที่ข้อมูลปัจจุบันในหน้านี้หรือไม่?\n(แนะนำ Export ข้อมูลปัจจุบันเก็บไว้ก่อน เผื่อกู้ผิดไฟล์ — การกดตกลงจะไม่บันทึกทับไฟล์จริงทันที จนกว่าจะมีการแก้ไขครั้งถัดไป)`)) return;
+  appData = normalizeData(migrateData(backup));
+  recomputeNextId();
+  renderToday(); renderHistory(); renderStats();
+  showToast('กู้คืนข้อมูลจาก backup แล้ว — ตรวจสอบให้ถูกต้องแล้วค่อยบันทึก/Export ทับไฟล์จริง');
+});
+
+document.getElementById('btnSetBackupFolder').addEventListener('click', async ()=>{
+  try{
+    const handle = await window.showDirectoryPicker({mode:'readwrite'});
+    backupDirHandle = handle;
+    backupFolderPermState = 'connected';
+    lastFolderBackupAt = null;
+    await idbSet('backupDirHandle', handle);
+    renderBackupFolderUI();
+    showToast('ตั้งโฟลเดอร์สำรองอัตโนมัติแล้ว');
+  }catch(e){
+    if(e.name!=='AbortError'){ console.warn('set backup folder failed', e); }
+  }
+});
+
+document.getElementById('btnReconnectBackupFolder').addEventListener('click', async ()=>{
+  try{
+    if(!backupDirHandle){
+      const handle = await idbGet('backupDirHandle');
+      if(!handle){
+        alert('ไม่พบโฟลเดอร์สำรองที่เคยตั้งไว้ ลองตั้งใหม่อีกครั้ง');
+        backupFolderPermState = 'unset';
+        renderBackupFolderUI();
+        return;
+      }
+      backupDirHandle = handle;
+    }
+    const perm = await backupDirHandle.requestPermission({mode:'readwrite'});
+    if(perm!=='granted'){ alert('ไม่ได้รับสิทธิ์เข้าถึงโฟลเดอร์ ลองเลือกโฟลเดอร์ใหม่แทน'); return; }
+    backupFolderPermState = 'connected';
+    renderBackupFolderUI();
+  }catch(e){
+    console.error(e);
+    alert('เชื่อมต่อโฟลเดอร์สำรองไม่สำเร็จ: '+(e.message||'ไม่ทราบสาเหตุ'));
+  }
+});
+
+document.getElementById('lnkClearBackupFolder').addEventListener('click', async (e)=>{
+  e.preventDefault();
+  backupDirHandle = null;
+  backupFolderPermState = 'unset';
+  lastFolderBackupAt = null;
+  try{ await idbSet('backupDirHandle', null); }catch(err){ console.warn(err); }
+  renderBackupFolderUI();
+});
+
+// เผื่อปิดแท็บเร็วเกินกว่า debounce (300ms) ของ scheduleSave: ทำสำเนา backup
+// แบบ best-effort ทันที และเตือนผู้ใช้ถ้าเป็นโหมดไฟล์จริง (เขียนลง IndexedDB เป็น async
+// รับประกันไม่ได้ว่าจะเสร็จทันก่อนแท็บถูกปิด เหมือนกับการเขียนไฟล์จริงที่ก็รับประกันไม่ได้เช่นกัน)
+window.addEventListener('beforeunload', (e)=>{
+  if(!hasPendingSave) return;
+  writeLocalBackup();
+  if(storageMode==='fs'){
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
+
+function downloadBlob(blob, filename){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+document.getElementById('btnImport').addEventListener('click', ()=>{
+  document.getElementById('hiddenFileInput').click();
+});
+document.getElementById('hiddenFileInput').addEventListener('change', async (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  try{
+    const text = await file.text();
+    const imported = JSON.parse(text);
+    if(!imported || !imported.activities) throw new Error('ไฟล์ไม่ถูกต้อง');
+
+    const validActivities = imported.activities.filter(validateActivity);
+    const skipped = imported.activities.length - validActivities.length;
+    const skippedNote = skipped>0 ? `\n(ข้าม ${skipped} รายการที่โครงสร้างข้อมูลไม่ถูกต้อง)` : '';
+    if(!confirm(`นำเข้าข้อมูล ${validActivities.length} กิจกรรม และรวมกับข้อมูลปัจจุบันหรือไม่?${skippedNote}`)) return;
+
+    // เดิม: ถ้า id จากไฟล์ import ชนกับ id ที่มีอยู่แล้ว (id เป็นเลขรัน 1,2,3... ชนกันได้ง่ายมากระหว่าง 2 ไฟล์
+    // ที่แยกกันสร้าง) จะเขียนทับกิจกรรมเดิมทันทีโดยไม่เตือน — ถ้าเนื้อหาต่างกันจริง (ไม่ใช่รายการเดียวกัน)
+    // ให้ออก id ใหม่ให้แทน กันข้อมูลเดิมหายอย่างเงียบๆ
+    const byId = new Map(appData.activities.map(a=>[a.id,a]));
+    const touchedDays = new Set();
+    validActivities.forEach(a=>{
+      const existing = byId.get(a.id);
+      let toAdd = a;
+      if(existing && JSON.stringify(existing)!==JSON.stringify(a)){
+        toAdd = Object.assign({}, a, { id: nextId++ });
+      }
+      byId.set(toAdd.id, toAdd);
+      touchedDays.add(toAdd.timelineDay);
+    });
+    appData.activities = Array.from(byId.values());
+
+    // merge สถานะวัน: เดิมเขียนทับ appData.days[d] ด้วยของไฟล์ import ตรงๆ ทำให้วันที่ "จบแล้ว" ในเครื่อง
+    // ถูกเปลี่ยนกลับเป็น "ยังไม่จบ" ถ้าไฟล์ import มีวันเดียวกันแต่ยังไม่ได้ปิด — ให้ถือว่า completed
+    // ชนะเสมอ (ถ้าฝั่งใดฝั่งหนึ่งจบแล้ว ก็ถือว่าจบแล้ว) แทนการเขียนทับตรงๆ
+    Object.keys(imported.days||{}).forEach(d=>{
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(d)) return; // ข้าม key วันที่รูปแบบผิด กัน renderHistory พังภายหลัง
+      const incoming = imported.days[d];
+      const existing = appData.days[d];
+      if(!existing){
+        appData.days[d] = incoming;
+      } else {
+        const bothStatuses = [existing.status, incoming.status];
+        appData.days[d] = Object.assign({}, existing, incoming, {
+          status: bothStatuses.includes('completed') ? 'completed' : (incoming.status || existing.status),
+          completedAt: existing.completedAt || incoming.completedAt || null,
+        });
+      }
+    });
+    // กิจกรรมที่นำเข้ามาแต่ยังไม่มี day record เลย (ไฟล์ import ไม่มี days ของวันนั้น) ต้องสร้างให้
+    // เดิมไม่มีขั้นตอนนี้ ทำให้กิจกรรมนับในสถิติได้แต่ไม่ขึ้นในหน้า History
+    touchedDays.forEach(d=>{ if(d) ensureDay(d); });
+
+    // เป้าหมาย (goals): เติมเฉพาะหมวดที่ในเครื่องยังไม่ได้ตั้ง ไม่เขียนทับเป้าที่ตั้งไว้แล้ว
+    // (ตอนย้ายไปโฮสต์ใหม่ที่ข้อมูลว่าง เป้าจากไฟล์เดิมจะติดมาด้วย) — ตรวจ unit/target ก่อนรับ กันค่าแปลกจากไฟล์ที่ถูกแก้
+    if(imported.goals && typeof imported.goals==='object'){
+      DURATION_CATEGORIES.forEach(c=>{
+        const g = imported.goals[c.value];
+        if(!g || appData.goals[c.value]) return;
+        const okUnit = g.unit==='minutes' || (g.unit==='pages' && c.value==='reading');
+        if(okUnit && typeof g.target==='number' && g.target>0){
+          appData.goals[c.value] = { unit:g.unit, target:Math.round(g.target) };
+        }
+      });
+    }
+
+    appData = normalizeData(appData);
+    recomputeNextId();
+
+    scheduleSave();
+    renderToday(); renderHistory(); renderStats();
+    showToast(skipped>0 ? `นำเข้าสำเร็จ (ข้าม ${skipped} รายการที่ไม่ถูกต้อง)` : 'นำเข้าข้อมูลสำเร็จ');
+  }catch(err){
+    alert('นำเข้าไฟล์ไม่สำเร็จ: '+err.message);
+  } finally {
+    e.target.value = '';
+  }
+});
+
+/* ============================================================
+   10. MISC
+   ============================================================ */
+function showToast(msg, actionLabel, actionFn){
+  const t = document.getElementById('toast');
+  t.innerHTML = '';
+  const msgSpan = document.createElement('span');
+  msgSpan.textContent = msg;
+  t.appendChild(msgSpan);
+  if(actionLabel && actionFn){
+    const btn = document.createElement('button');
+    btn.className = 'toast-action';
+    btn.textContent = actionLabel;
+    btn.addEventListener('click', ()=>{
+      t.classList.remove('show');
+      clearTimeout(t._timer);
+      actionFn();
+    });
+    t.appendChild(btn);
+    t.classList.add('has-action');
+  } else {
+    t.classList.remove('has-action');
+  }
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>t.classList.remove('show'), actionLabel ? 5000 : 2200);
+}
+
+/* PWA: Service Worker ใช้ได้เฉพาะบน HTTPS/localhost — เปิดแบบ file:// จะข้ามไปเงียบๆ แอปยังทำงานตามปกติ */
+if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('service-worker.js').catch(err=>console.warn('service worker register failed', err));
+  });
+}
+
+bootApp();
+})();
+</script>
+</body>
+</html>
