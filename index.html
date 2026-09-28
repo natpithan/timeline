@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0F1216">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -400,7 +400,18 @@
   .heatmap-hours span{ font-size:10px; color:var(--text-soft); text-align:center; }
 
   /* Yearly contribution graph — 53 สัปดาห์ x 7 วัน สีเดียว (accent) 5 ระดับ */
-  .yearmap{ overflow-x:auto; padding-bottom:4px; }
+  .yearnav{ display:flex; align-items:center; gap:4px; }
+  .yearnav-label{ min-width:112px; text-align:center; font-size:13px; font-weight:600; }
+  .yearnav .iconbtn:disabled{ opacity:.35; cursor:default; }
+  .yearmap-tip{
+    position:fixed; z-index:90; pointer-events:none; background:var(--card-raised); border:1px solid var(--line-strong);
+    border-radius:10px; padding:7px 11px; font-size:12px; line-height:1.5; box-shadow:0 12px 30px -10px rgba(0,0,0,.7);
+    opacity:0; transition:opacity .12s ease; max-width:240px;
+  }
+  .yearmap-tip.show{ opacity:1; }
+  .yearmap-tip b{ color:var(--accent); font-weight:600; }
+  .yearmap-cell.sel{ outline:1px solid var(--text); }
+  .yearmap{ overflow-x:auto; padding-bottom:4px; -webkit-overflow-scrolling:touch; }
   .yearmap-grid{ display:grid; grid-template-columns:26px repeat(53, minmax(10px,1fr)); gap:3px; min-width:640px; align-items:center; }
   .yearmap-cell{ aspect-ratio:1/1; border-radius:2px; background:var(--paper-2); }
   .yearmap-cell:hover{ outline:1px solid var(--text-soft); }
@@ -503,8 +514,11 @@
     .main{ padding:20px 20px 100px; }
     .stat-hero{ flex-direction:column; align-items:flex-start; padding:20px; }
     .stat-hero .hero-side{ gap:20px; }
-    .stat-grid{ grid-template-columns:1fr 1fr; }
-    .streak-grid{ grid-template-columns:repeat(2,1fr); }
+    .stat-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .streak-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .heatmap-scroll{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+    .heatmap{ overflow-x:visible; }
+    .heatmap, .heatmap-hours{ min-width:470px; }
     .heatmap-row, .heatmap-hours{ grid-template-columns:78px repeat(24,minmax(14px,1fr)); }
     .heatmap-row-label{ font-size:11px; }
     .entry{ grid-template-columns:90px 1fr; }
@@ -539,6 +553,39 @@
     .modal::before{ content:''; display:block; width:36px; height:4px; border-radius:2px; background:var(--line-strong); margin:-8px auto 14px; }
     .overlay.active .modal{ animation:sheetUp .3s cubic-bezier(.22,.8,.24,1); }
   }
+
+  /* ---------- มือถือ: ลิ้นชักเมนู ปุ่มสัมผัส ≥44px ช่องกรอก ≥16px safe-area ---------- */
+  .topbar, .scrim{ display:none; }
+  @media (max-width:720px){
+    .topbar{
+      display:flex; align-items:center; gap:6px; position:sticky; top:0; z-index:30;
+      padding:env(safe-area-inset-top, 0px) max(8px, env(safe-area-inset-right, 0px)) 0 max(8px, env(safe-area-inset-left, 0px));
+      min-height:calc(52px + env(safe-area-inset-top, 0px)); background:rgba(10,12,15,.92); border-bottom:1px solid var(--line);
+    }
+    .menu-btn{ all:unset; cursor:pointer; box-sizing:border-box; width:44px; height:44px; display:flex; align-items:center; justify-content:center; font-size:20px; border-radius:var(--radius); color:var(--text); }
+    .menu-btn:hover{ background:var(--ink-2); }
+    .topbar-title{ font-size:15px; font-weight:600; }
+    .scrim{ position:fixed; inset:0; z-index:55; background:rgba(6,8,11,.62); }
+    .scrim.show{ display:block; animation:overlayIn .2s ease; }
+    body.drawer-open{ overflow:hidden; }
+    .sidebar{
+      position:fixed; top:0; bottom:0; left:0; z-index:60; width:min(300px, 86vw); flex:none; flex-direction:column; flex-wrap:nowrap;
+      overflow-y:auto; padding:calc(20px + env(safe-area-inset-top, 0px)) 16px calc(20px + env(safe-area-inset-bottom, 0px));
+      transform:translateX(-102%); transition:transform .28s cubic-bezier(.22,.8,.24,1); box-shadow:none;
+    }
+    .sidebar.open{ transform:none; box-shadow:12px 0 40px -10px rgba(0,0,0,.7); }
+    .nav{ flex-direction:column; flex-wrap:nowrap; margin-top:24px; }
+    .sidebar-bottom{ flex-direction:column; flex-wrap:nowrap; margin-top:auto; padding-top:20px; }
+    .main{ padding-left:max(20px, env(safe-area-inset-left, 0px)); padding-right:max(20px, env(safe-area-inset-right, 0px)); }
+    .btn, .iconbtn, .side-btn, .nav button, .quick-chip, .seg button, .hist-row, .checkline{ min-height:44px; }
+    .btn, .side-btn, .seg button{ box-sizing:border-box; }
+    .iconbtn{ min-width:44px; height:44px; }
+    .entry .actions .iconbtn{ width:44px; height:44px; font-size:15px; }
+    .toast-action{ display:inline-flex; align-items:center; min-height:44px; }
+    .checkline input{ width:22px; height:22px; }
+    .field input[type=text], .field input[type=password], .field input[type=number], .field input[type=date], .field select, .field textarea,
+    .date-input, .history-filters input[type=text], .history-filters select, .timer-box select, .timepick select, .row2 select{ font-size:16px; min-height:44px; }
+  }
 </style>
 </head>
 <body>
@@ -561,6 +608,12 @@
     <div class="startup-note" id="startupNote"></div>
   </div>
 </div>
+
+<div class="topbar" id="topbar">
+  <button class="menu-btn" id="btnMenu" aria-label="เปิดเมนู" aria-expanded="false" aria-controls="sidebar">☰</button>
+  <span class="topbar-title" id="topbarTitle">วันนี้ / Timeline</span>
+</div>
+<div class="scrim" id="scrim"></div>
 
 <div class="sidebar" id="sidebar" style="display:none;">
   <div class="brand">Daily Timeline<small>Manager — เก็บไฟล์ในเครื่อง</small></div>
@@ -691,12 +744,17 @@
 
     <div class="stat-section">
       <div class="stat-section-title" id="heatmapTitle">ช่วงเวลาที่มักทำกิจกรรม แยกตามหมวดหมู่</div>
-      <div class="heatmap" id="heatmap"></div>
-      <div class="heatmap-hours" id="heatmapHours"></div>
+      <div class="heatmap-scroll">
+        <div class="heatmap" id="heatmap"></div>
+        <div class="heatmap-hours" id="heatmapHours"></div>
+      </div>
     </div>
 
     <div class="stat-section">
-      <div class="stat-section-title">ภาพรวมทั้งปี</div>
+      <div class="stat-section-head">
+        <div class="stat-section-title">ภาพรวมทั้งปี</div>
+        <div class="yearnav" id="yearNav"></div>
+      </div>
       <div class="yearmap" id="yearMap"></div>
       <div class="yearmap-foot" id="yearMapFoot"></div>
     </div>
@@ -3542,19 +3600,51 @@ function makeYearLevelFn(values){
   return v=> v<=0 ? 0 : (v<=q1 ? 1 : v<=q2 ? 2 : v<=q3 ? 3 : 4);
 }
 
+/* แผนที่ความสม่ำเสมอรายปี: โหมด 'recent' = 53 สัปดาห์ล่าสุด (แบบเดิม) หรือเลือกปีปฏิทินได้ — วัดจากเวลารวมต่อวัน อ่านอย่างเดียว ไม่แตะข้อมูล */
+let yearMapMode = 'recent';
+function yearMapChoices(){
+  const cur = Number(todayStr().slice(0,4));
+  let minY = cur;
+  appData.activities.forEach(a=>{
+    if(a.isMilestone || !a.durationMinutes || !a.timelineDay) return;
+    const y = Number(a.timelineDay.slice(0,4));
+    if(y>1990 && y<minY) minY = y;
+  });
+  const list = ['recent'];
+  for(let y=cur; y>=minY; y--) list.push(y);
+  return list;
+}
 function renderYearMap(){
   const box = document.getElementById('yearMap');
   const foot = document.getElementById('yearMapFoot');
+  const nav = document.getElementById('yearNav');
 
   const today = todayStr();
-  const [ty,tm,td] = today.split('-').map(Number);
-  const dowToday = (new Date(ty,tm-1,td).getDay()+6)%7; // 0 = จันทร์
-  const startStr = addDaysToDateStr(today, -(dowToday + (YEARMAP_WEEKS-1)*7));
+  const choices = yearMapChoices();
+  if(!choices.includes(yearMapMode)) yearMapMode = 'recent';
+  const idx = choices.indexOf(yearMapMode);
+  nav.innerHTML = `<button class="iconbtn" data-ynav="1" aria-label="ปีก่อนหน้า" ${idx>=choices.length-1?'disabled':''}>‹</button>
+    <span class="yearnav-label">${yearMapMode==='recent' ? '12 เดือนล่าสุด' : 'ปี ' + (yearMapMode+543)}</span>
+    <button class="iconbtn" data-ynav="-1" aria-label="ปีถัดไป" ${idx<=0?'disabled':''}>›</button>`;
+
+  let startStr, rangeFrom, rangeTo;
+  if(yearMapMode==='recent'){
+    const [ty,tm,td] = today.split('-').map(Number);
+    const dowToday = (new Date(ty,tm-1,td).getDay()+6)%7; // 0 = จันทร์
+    startStr = addDaysToDateStr(today, -(dowToday + (YEARMAP_WEEKS-1)*7));
+    rangeFrom = startStr; rangeTo = today;
+  } else {
+    const y = yearMapMode;
+    const jan1 = `${y}-01-01`;
+    const [jy,jm,jd] = jan1.split('-').map(Number);
+    startStr = addDaysToDateStr(jan1, -((new Date(jy,jm-1,jd).getDay()+6)%7));
+    rangeFrom = jan1; rangeTo = (`${y}-12-31` < today) ? `${y}-12-31` : today;
+  }
 
   const perDay = {};
   appData.activities.forEach(a=>{
     if(a.isMilestone || !a.durationMinutes) return;
-    if(a.timelineDay < startStr || a.timelineDay > today) return;
+    if(a.timelineDay < rangeFrom || a.timelineDay > rangeTo) return;
     perDay[a.timelineDay] = (perDay[a.timelineDay]||0) + a.durationMinutes;
   });
   const levelOf = makeYearLevelFn(Object.values(perDay));
@@ -3572,7 +3662,7 @@ function renderYearMap(){
     if(dowLabels[d]) cells.push(`<span class="yearmap-dow" style="grid-column:1;grid-row:${d+2}">${dowLabels[d]}</span>`);
   }
 
-  let activeDays = 0, totalMinutes = 0;
+  let activeDays = 0, totalMinutes = 0, drawn = 0, todayCol = -1;
   for(let w=0; w<YEARMAP_WEEKS; w++){
     const mondayStr = addDaysToDateStr(startStr, w*7);
     const monthIdx = Number(mondayStr.split('-')[1]) - 1;
@@ -3584,21 +3674,60 @@ function renderYearMap(){
     }
     for(let d=0; d<7; d++){
       const ds = addDaysToDateStr(mondayStr, d);
-      if(ds > today) continue; // วันในอนาคตไม่วาดช่อง
+      if(ds < rangeFrom || ds > rangeTo) continue; // นอกช่วง/อนาคตไม่วาดช่อง
+      drawn++;
+      if(ds===today) todayCol = w;
       const mins = perDay[ds] || 0;
       if(mins>0){ activeDays++; totalMinutes += mins; }
-      const title = mins>0 ? `${weekdayLabel(ds)} — ${fmtDur(mins)}` : `${weekdayLabel(ds)} — ไม่มีข้อมูล`;
-      cells.push(`<span class="yearmap-cell" style="grid-column:${w+2};grid-row:${d+2};background:${levelBg(levelOf(mins))}" title="${title}"></span>`);
+      const tip = mins>0 ? `${weekdayLabel(ds)}|${fmtDur(mins)}` : `${weekdayLabel(ds)}|ไม่มีข้อมูล`;
+      cells.push(`<span class="yearmap-cell" data-tip="${tip}" style="grid-column:${w+2};grid-row:${d+2};background:${levelBg(levelOf(mins))}"></span>`);
     }
   }
   const monthHtml = monthLabels.map(m=>`<span class="yearmap-month" style="grid-column:${m.col+2};grid-row:1">${m.text}</span>`).join('');
   box.innerHTML = `<div class="yearmap-grid">${monthHtml}${cells.join('')}</div>`;
+  // มือถือเลื่อนแนวนอนได้: เลื่อนไปที่ช่วงล่าสุด (หรือสัปดาห์ปัจจุบันของปีนี้) อัตโนมัติ
+  requestAnimationFrame(()=>{
+    if(yearMapMode==='recent') box.scrollLeft = box.scrollWidth;
+    else if(todayCol>=0) box.scrollLeft = Math.max(0, box.scrollWidth*(todayCol/YEARMAP_WEEKS) - box.clientWidth/2);
+    else box.scrollLeft = 0;
+  });
 
-  const totalDaysWindow = (YEARMAP_WEEKS-1)*7 + dowToday + 1;
   const legend = [0,1,2,3,4].map(lv=>`<span class="yearmap-cell" style="background:${levelBg(lv)}"></span>`).join('');
-  foot.innerHTML = `<span>มีบันทึก <b style="color:var(--text)">${activeDays.toLocaleString('th-TH')}</b> จาก ${totalDaysWindow.toLocaleString('th-TH')} วัน · รวม ${fmtDur(totalMinutes) || '0 นาที'}</span>
+  foot.innerHTML = `<span>มีบันทึก <b style="color:var(--text)">${activeDays.toLocaleString('th-TH')}</b> จาก ${drawn.toLocaleString('th-TH')} วัน · รวม ${fmtDur(totalMinutes) || '0 นาที'}</span>
     <span class="yearmap-legend">น้อย ${legend} มาก</span>`;
 }
+(function(){
+  const nav = document.getElementById('yearNav');
+  nav.addEventListener('click', e=>{
+    const btn = e.target.closest('[data-ynav]');
+    if(!btn || btn.disabled) return;
+    const list = yearMapChoices();
+    const i = list.indexOf(yearMapMode) + Number(btn.dataset.ynav);
+    if(i>=0 && i<list.length){ yearMapMode = list[i]; renderYearMap(); }
+  });
+  const tip = document.createElement('div');
+  tip.className = 'yearmap-tip'; document.body.appendChild(tip);
+  const mapEl = document.getElementById('yearMap');
+  let selCell = null;
+  function hide(){ tip.classList.remove('show'); if(selCell){ selCell.classList.remove('sel'); selCell = null; } }
+  function show(cell){
+    const [day, val] = (cell.dataset.tip||'').split('|');
+    tip.innerHTML = `${day}<br><b>${val}</b>`;
+    const r = cell.getBoundingClientRect();
+    tip.style.left = '0px'; tip.style.top = '0px';
+    const tw = tip.offsetWidth, th = tip.offsetHeight;
+    tip.style.left = Math.max(8, Math.min(window.innerWidth - tw - 8, r.left + r.width/2 - tw/2)) + 'px';
+    tip.style.top = (r.top - th - 8 < 8 ? r.bottom + 8 : r.top - th - 8) + 'px';
+    tip.classList.add('show');
+    if(selCell) selCell.classList.remove('sel');
+    selCell = cell; cell.classList.add('sel');
+  }
+  mapEl.addEventListener('mouseover', e=>{ const c = e.target.closest('.yearmap-cell[data-tip]'); if(c) show(c); });
+  mapEl.addEventListener('mouseleave', hide);
+  mapEl.addEventListener('click', e=>{ const c = e.target.closest('.yearmap-cell[data-tip]'); if(c) show(c); else hide(); });
+  mapEl.addEventListener('scroll', hide, { passive:true });
+  window.addEventListener('scroll', hide, { passive:true, capture:true });
+})();
 
 /* re-render กราฟ trend ตอนย่อ/ขยายหน้าต่าง ถ้าตอนนั้นเปิดแท็บ Stats อยู่ (debounce กันยิงถี่เกินไป) */
 let trendResizeTimer = null;
@@ -3880,6 +4009,38 @@ if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
 }
 
 bootApp();
+
+/* ---- ลิ้นชักเมนูบนมือถือ (เฉพาะ UI ไม่แตะข้อมูล) ---- */
+(function(){
+  const sb = document.getElementById('sidebar'), scrim = document.getElementById('scrim');
+  const btn = document.getElementById('btnMenu'), title = document.getElementById('topbarTitle');
+  const mq = window.matchMedia('(max-width:720px)');
+  function setOpen(open){
+    sb.classList.toggle('open', open);
+    scrim.classList.toggle('show', open);
+    document.body.classList.toggle('drawer-open', open);
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    btn.setAttribute('aria-label', open ? 'ปิดเมนู' : 'เปิดเมนู');
+    sb.inert = mq.matches && !open;     // ปิดอยู่บนมือถือ = โฟกัสด้วยคีย์บอร์ดไม่ได้
+    if(open){ const first = sb.querySelector('.nav button'); if(first) first.focus(); }
+  }
+  btn.addEventListener('click', ()=>setOpen(!sb.classList.contains('open')));
+  scrim.addEventListener('click', ()=>{ setOpen(false); btn.focus(); });
+  document.addEventListener('keydown', e=>{
+    if(e.key==='Escape' && sb.classList.contains('open')){ setOpen(false); btn.focus(); }
+  });
+  sb.querySelectorAll('.nav button').forEach(b=>b.addEventListener('click', ()=>{
+    title.textContent = b.textContent.trim();
+    if(mq.matches) setOpen(false);
+  }));
+  sb.querySelectorAll('.side-btn').forEach(b=>b.addEventListener('click', ()=>{
+    if(mq.matches && b.id!=='btnGhNow') setOpen(false);   // ปุ่มซิงค์ตอนนี้ค้างลิ้นชักไว้ ให้เห็นสถานะซิงค์
+  }));
+  const onMq = ()=>setOpen(false);
+  if(mq.addEventListener) mq.addEventListener('change', onMq); else if(mq.addListener) mq.addListener(onMq);
+  setOpen(false);
+})();
+
 })();
 </script>
 </body>
