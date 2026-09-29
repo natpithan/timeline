@@ -3,7 +3,7 @@
   "short_name": "Timeline",
   "description": "บันทึกและดูไทม์ไลน์กิจกรรมรายวัน พร้อมเป้าหมายและสถิติ",
   "lang": "th",
-  "start_url": "./",
+  "start_url": "Timeline.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",

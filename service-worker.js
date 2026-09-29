@@ -1,12 +1,11 @@
 /* Daily Timeline Manager — service worker
    แคช app shell ให้เปิดออฟไลน์ได้ ข้อมูลกิจกรรมอยู่ใน localStorage/ไฟล์ในเครื่อง ไม่เกี่ยวกับ SW นี้เลย
    เวลาแก้ index.html แล้วอัปโหลดใหม่: เปลี่ยนเลข CACHE_VERSION ด้านล่างให้ SW รู้ว่ามีของใหม่ */
-const CACHE_VERSION = 'v11';
+const CACHE_VERSION = 'v13';
 const CACHE_NAME = 'dtm-shell-' + CACHE_VERSION;
 const FONT_CACHE = 'dtm-fonts-v1';
 const SHELL = [
-  './',
-  'index.html',
+  'Timeline.html',
   'manifest.json',
   'icons/icon-192.png',
   'icons/icon-512.png',
@@ -59,7 +58,7 @@ self.addEventListener('fetch', (event) => {
           return res;
         }).catch(() => null);
         if (hit) return hit;
-        return net.then((res) => res || (req.mode === 'navigate' ? cache.match('index.html') : Response.error()));
+        return net.then((res) => res || (req.mode === 'navigate' ? cache.match('Timeline.html') : Response.error()));
       })
     )
   );
