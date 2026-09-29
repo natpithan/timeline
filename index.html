@@ -286,8 +286,9 @@
     display:grid; grid-template-columns:150px 1fr auto; gap:12px; align-items:center;
     padding:11px 16px; border-bottom:1px solid var(--line); cursor:pointer; background:var(--card);
   }
-  .hist-row:first-of-type{ border-radius:var(--radius-lg) var(--radius-lg) 0 0; }
-  .hist-row:last-of-type{ border-bottom:none; border-radius:0 0 var(--radius-lg) var(--radius-lg); }
+  .month-title + .hist-row{ border-radius:var(--radius-lg) var(--radius-lg) 0 0; }
+  .hist-row:last-child{ border-bottom:none; border-radius:0 0 var(--radius-lg) var(--radius-lg); }
+  .month-title + .hist-row:last-child{ border-radius:var(--radius-lg); }
   .hist-row:hover{ background:var(--paper-2); }
   .hist-row .d{ font-weight:600; font-size:14px; }
   .hist-row .wd{ color:var(--text-soft); font-size:13px; }
@@ -821,6 +822,7 @@
         <select id="fStartPrecision">
           <option value="exact">เวลาที่ระบุแน่นอน</option>
           <option value="approximate">เวลาโดยประมาณ</option>
+          <option value="calculated" disabled>คำนวณจากระยะเวลา</option>
         </select>
       </div>
       <label class="checkline" id="startCrossWrap"><input type="checkbox" id="fStartCross"> ข้ามเที่ยงคืนจาก Timeline Day <span class="hint" style="margin:0;">(ระบบเดาให้อัตโนมัติ ปรับได้หากไม่ตรง)</span></label>
@@ -1145,7 +1147,7 @@ const hasFSAccess = ('showOpenFilePicker' in window) && ('showSaveFilePicker' in
 let backupDirHandle = null;               // FileSystemDirectoryHandle
 let backupFolderPermState = 'unset';      // 'unset' | 'connected' | 'disconnected'
 let lastFolderBackupAt = null;
-const BACKUP_KEEP_COUNT = 30;
+const BACKUP_KEEP_DAYS = 30;   // จำนวนวันที่เก็บ backup ย้อนหลัง
 const hasDirAccess = 'showDirectoryPicker' in window;
 
 async function writeToFileHandle(handle, dataObj){
@@ -1213,9 +1215,10 @@ async function getAllLocalBackups(){
 
 /* ---- โฟลเดอร์สำรองอัตโนมัติ ---- */
 
+// ชื่อไฟล์ระดับ "ชั่วโมง" — save หลายครั้งในชั่วโมงเดียวกันเขียนทับไฟล์เดิม ไม่ทำให้ไฟล์งอกทุกครั้งที่ save
 function backupTimestamp(){
   const d = new Date();
-  return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}_${pad2(d.getHours())}-${pad2(d.getMinutes())}-${pad2(d.getSeconds())}`;
+  return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}_${pad2(d.getHours())}`;
 }
 
 async function writeFolderBackup(){
@@ -1239,14 +1242,23 @@ async function writeFolderBackup(){
   }
 }
 
+/* เก็บรายชั่วโมงเต็มของ 2 วันล่าสุด, ก่อนหน้านั้นเก็บวันละ 1 ไฟล์ (ตัวล่าสุดของวัน) ย้อนไป BACKUP_KEEP_DAYS วัน */
 async function pruneFolderBackups(){
   const names = [];
   for await (const [name, h] of backupDirHandle.entries()){
-    if(h.kind==='file' && /^dtm-backup_.*\.json$/.test(name)) names.push(name);
+    if(h.kind==='file' && /^dtm-backup_\d{4}-\d{2}-\d{2}_.*\.json$/.test(name)) names.push(name);
   }
-  names.sort(); // ชื่อไฟล์ฝัง timestamp แบบ sortable อยู่แล้ว
-  for(let i=0;i<names.length-BACKUP_KEEP_COUNT;i++){
-    await backupDirHandle.removeEntry(names[i]);
+  names.sort(); // ชื่อฝัง timestamp แบบ sortable
+  const today = todayStr();
+  const keepAllFrom = addDaysToDateStr(today, -2);
+  const dropBefore = addDaysToDateStr(today, -BACKUP_KEEP_DAYS);
+  const lastOfDay = {};
+  names.forEach(n=>{ lastOfDay[n.slice(11,21)] = n; }); // 'dtm-backup_' ยาว 11 ตัว, วันที่ 10 ตัว
+  for(const n of names){
+    const day = n.slice(11,21);
+    if(day < dropBefore || (day < keepAllFrom && lastOfDay[day] !== n)){
+      await backupDirHandle.removeEntry(n);
+    }
   }
 }
 
@@ -1372,6 +1384,18 @@ function setFileStatus(state, extra){
   } else if(state==='error'){
     el.innerHTML = `<b style="color:var(--danger)">บันทึกไม่สำเร็จ</b>${escapeHtml(extra||'')}`;
   }
+}
+
+/* ปิด modal เมื่อกดลงและปล่อยบน backdrop ทั้งคู่เท่านั้น กันลากเลือกข้อความในช่องแล้วปล่อยเมาส์นอกกรอบ
+   แล้ว modal ปิดพร้อมค่าที่กรอกหาย (เดิม goals/GitHub modal ไม่มีการเตือนก่อนปิดเลย) */
+function bindBackdropClose(el, onClose){
+  let downOnBackdrop = false;
+  el.addEventListener('pointerdown', e=>{ downOnBackdrop = (e.target===el); });
+  el.addEventListener('click', e=>{
+    const ok = downOnBackdrop && e.target===el;
+    downOnBackdrop = false;
+    if(ok) onClose();
+  });
 }
 
 /* ============================================================
@@ -1557,7 +1581,13 @@ async function ghPush(cfg, data, sha){
   let res;
   try{ res = await fetch(ghContentsUrl(cfg), { method:'PUT', headers:Object.assign({'Content-Type':'application/json'}, ghHeaders(cfg)), body:JSON.stringify(body) }); }
   catch(e){ throw new Error('เชื่อมต่อ GitHub ไม่ได้ (ตรวจอินเทอร์เน็ต)'); }
-  if(res.status===409 || res.status===422) return 'conflict';
+  if(res.status===409) return 'conflict';
+  if(res.status===422){
+    let m = '';
+    try{ m = (await res.json()).message || ''; }catch(e){ /* อ่านข้อความไม่ได้ ใช้ข้อความกลาง */ }
+    if(/sha/i.test(m)) return 'conflict';   // อีกเครื่องสร้างไฟล์ไปก่อนระหว่างที่เรายังไม่มี sha
+    throw new Error('GitHub ปฏิเสธการบันทึก' + (m ? ': '+m : '') + ' (ตรวจชื่อ branch / ชื่อไฟล์)');
+  }
   await ghCheckStatus(res);
   return 'ok';
 }
@@ -1674,7 +1704,7 @@ function ghOpenModal(){
 function ghCloseModal(){ ghOverlay.classList.remove('active'); }
 document.getElementById('btnGhSetup').addEventListener('click', ghOpenModal);
 document.getElementById('btnGhClose').addEventListener('click', ghCloseModal);
-ghOverlay.addEventListener('click', (e)=>{ if(e.target===ghOverlay) ghCloseModal(); });
+bindBackdropClose(ghOverlay, ghCloseModal);
 document.getElementById('btnGhNow').addEventListener('click', ()=>{ ghSync('manual'); });
 
 document.getElementById('btnGhSave').addEventListener('click', async ()=>{
@@ -1690,6 +1720,12 @@ document.getElementById('btnGhSave').addEventListener('click', async ()=>{
   const cfg = { repo, branch, path, token };
   try{
     await ghFetchRemote(cfg);   // ทดสอบสิทธิ์ + อ่านไฟล์ (ยังไม่มีไฟล์ = ปกติ จะสร้างให้ตอนซิงค์ครั้งแรก)
+    // ผ่านมาถึงตรงนี้แปลว่าเชื่อมต่อได้และมีสิทธิ์แล้ว — กันเผลอใช้ repo Public ที่ข้อมูลส่วนตัวจะเปิดให้ทุกคนเห็น
+    const rr = await fetch(`${GH_API}/repos/${cfg.repo}`, { headers:ghHeaders(cfg), cache:'no-store' });
+    if(rr.ok){
+      const info = await rr.json();
+      if(info.private!==true) throw new Error('repo นี้เป็น Public — เวลาตื่น/นอนและกิจกรรมทั้งหมดจะเปิดให้ทุกคนเห็น ใช้ repo Private เท่านั้น');
+    }
     const changedTarget = !old || old.repo!==repo || old.branch!==branch || old.path!==path;
     if(changedTarget) await ghResetBase();   // ปลายทางใหม่ → merge แบบรวม ไม่ลบอะไรจากฝั่งใดฝั่งหนึ่ง
     localStorage.setItem('dtm_gh_cfg', JSON.stringify(cfg));
@@ -1932,14 +1968,30 @@ function effectiveTodayStr(){
 
 let currentDay = todayStr();
 
+/* ตรวจข้ามวัน (เลย 06:00 หรือกลับมาเปิดแท็บ) แล้ว refresh หน้า "วันนี้" เอง — ถ้าผู้ใช้กำลังดูวันย้อนหลังอยู่จะไม่ยุ่ง */
+let prevEff = null;
+function checkRollover(){
+  if(!storageMode) return;
+  const e = effectiveTodayStr();
+  if(prevEff===null){ prevEff = e; return; }
+  if(e===prevEff) return;
+  const followed = (currentDay===prevEff); // ถ้ากำลังดู "วันนี้" อยู่ ให้เลื่อนตามไปวันใหม่ ถ้าดูวันย้อนหลังอยู่ไม่ยุ่ง
+  prevEff = e;
+  if(followed){ currentDay = e; document.getElementById('dayPicker').value = e; }
+  renderToday();
+}
+setInterval(checkRollover, 60000);
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') checkRollover(); });
+
 function initUI(){
   currentDay = effectiveTodayStr();
+  prevEff = effectiveTodayStr();
   document.getElementById('dayPicker').value = currentDay;
   renderToday();
 }
 
 document.getElementById('dayPicker').addEventListener('change', (e)=>{
-  currentDay = e.target.value || todayStr();
+  currentDay = e.target.value || effectiveTodayStr();
   renderToday();
 });
 document.getElementById('btnPrevDay').addEventListener('click', ()=>{
@@ -2203,7 +2255,7 @@ document.getElementById('todayGoals').addEventListener('click', e=>{
 function escapeHtml(s){
   const d = document.createElement('div');
   d.textContent = s;
-  return d.innerHTML;
+  return d.innerHTML.replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
 function deleteActivity(id){
@@ -2323,6 +2375,7 @@ document.getElementById('btnStopTimer').addEventListener('click', ()=>{
   updateTimerUI();
   // เปิด modal ให้ผู้ใช้ตรวจสอบ/แก้ไขก่อนบันทึกจริง แทนการบันทึกอัตโนมัติทันที (กันกรณีลืมหยุดแล้วเวลาเพี้ยน)
   openModal(null, { category: timer.category });
+  document.getElementById('modalTitle').textContent = 'บันทึกจากตัวจับเวลา';
   document.getElementById('fTimelineDay').value = timer.timelineDay;
   setTimeValue('fStartTime', fmtHM(new Date(timer.startISO)));
   document.getElementById('fStartPrecision').value = 'exact';
@@ -2532,10 +2585,7 @@ function tryCloseModal(){
   closeModal();
 }
 document.getElementById('btnModalCancel').addEventListener('click', tryCloseModal);
-overlay.addEventListener('click', (e)=>{
-  if(e.target!==overlay) return;
-  tryCloseModal();
-});
+bindBackdropClose(overlay, tryCloseModal);
 document.addEventListener('keydown', (e)=>{
   if(e.key==='Escape' && overlay.classList.contains('active')){ tryCloseModal(); return; }
   if(e.key==='Escape' && goalsOverlay.classList.contains('active')){ closeGoalsModal(); return; }
@@ -2547,7 +2597,9 @@ document.addEventListener('keydown', (e)=>{
     return;
   }
   // กด N เพิ่มกิจกรรมใหม่ได้ทันที — เฉพาะตอนไม่ได้โฟกัสอยู่ในช่องพิมพ์ข้อความใดๆ (กันพิมพ์ตัว n ปนไปเปิด modal)
-  if(e.key.toLowerCase()==='n' && !overlay.classList.contains('active') && !goalsOverlay.classList.contains('active') && !ghOverlay.classList.contains('active')){
+  if(e.code==='KeyN' && !e.ctrlKey && !e.metaKey && !e.altKey && !e.repeat
+     && storageMode && startupEl.style.display==='none'
+     && !overlay.classList.contains('active') && !goalsOverlay.classList.contains('active') && !ghOverlay.classList.contains('active')){
     const tag = (document.activeElement && document.activeElement.tagName) || '';
     const isTyping = tag==='INPUT' || tag==='TEXTAREA' || tag==='SELECT' || (document.activeElement && document.activeElement.isContentEditable);
     if(!isTyping && document.getElementById('view-today').classList.contains('active')){
@@ -2667,7 +2719,7 @@ function inferCrossesMidnight(timelineDay, timeStr, excludeId){
     }
   });
   const candidateSameDay = combineDateTime(timelineDay, t);
-  return candidateSameDay.getTime() <= lastDate.getTime();
+  return candidateSameDay.getTime() < lastDate.getTime(); // เท่ากัน (ต่อกันพอดี) ไม่ถือว่าข้ามเที่ยงคืน
 }
 
 let crossTouchedByUser = false; // true เมื่อผู้ใช้แก้ checkbox "ข้ามเที่ยงคืน" เอง — กัน auto-guess ทับค่าที่แก้แล้ว
@@ -2810,7 +2862,12 @@ document.getElementById('btnModalSave').addEventListener('click', ()=>{
     startISO = startDate.toISOString();
     endISO = endDateGuess.toISOString();
     startTime = fmtHM(startDate);
-    startCrosses = dateStrOf(startDate) !== timelineDay;
+    // startCrossesMidnight รองรับแค่ +1 วัน — ถ้า start ตกไปก่อน Timeline Day ต้องแจ้งผู้ใช้ ห้ามตั้ง flag ผิดทิศ
+    const startDayStr = dateStrOf(startDate);
+    if(startDayStr < timelineDay){
+      return showErr('เวลาเริ่มที่คำนวณได้ตกไปก่อน Timeline Day — ถ้าเวลาสิ้นสุดอยู่หลังเที่ยงคืน ให้ติ๊ก "เวลาสิ้นสุดนี้อยู่หลังเที่ยงคืน" หรือลดระยะเวลาลง');
+    }
+    startCrosses = startDayStr > timelineDay;
     startPrecision = 'calculated';
     durMin = totalMin;
   } else {
@@ -2954,6 +3011,7 @@ function renderHistory(){
       document.querySelector('.nav button[data-view="today"]').classList.add('active');
       document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
       document.getElementById('view-today').classList.add('active');
+      document.getElementById('topbarTitle').textContent = 'วันนี้ / Timeline';
       renderToday();
     };
     row.addEventListener('click', openDay);
@@ -3062,7 +3120,7 @@ function closeGoalsModal(){ goalsOverlay.classList.remove('active'); }
 
 document.getElementById('btnSetGoals').addEventListener('click', openGoalsModal);
 document.getElementById('btnGoalsCancel').addEventListener('click', closeGoalsModal);
-goalsOverlay.addEventListener('click', (e)=>{ if(e.target===goalsOverlay) closeGoalsModal(); });
+bindBackdropClose(goalsOverlay, closeGoalsModal);
 document.getElementById('btnGoalsSave').addEventListener('click', ()=>{
   const newGoals = {};
   document.querySelectorAll('#goalsFieldList .goal-field').forEach(row=>{
@@ -3167,7 +3225,7 @@ function streakFromDates(dates){
     longest = Math.max(longest, run);
     prev = ds;
   });
-  const today = todayStr(), yesterday = addDaysToDateStr(today,-1);
+  const today = effectiveTodayStr(), yesterday = addDaysToDateStr(today,-1); // ใช้วันของ timeline (ตี 0-6 ยังนับเป็นวันเมื่อวาน) ให้ตรงกับส่วนอื่นของแอป
   const last = dates.length ? dates[dates.length-1] : null;
   let current = 0;
   if(last===today || last===yesterday){
@@ -3959,6 +4017,17 @@ window.addEventListener('beforeunload', (e)=>{
   }
 });
 
+/* มือถือมักไม่ยิง beforeunload ตอนสลับแอป/ปิดหน้า — flush ตอนหน้าถูกซ่อน
+   โหมด local เขียน localStorage แบบ sync ก่อน (doSave มี await ก่อนถึงบรรทัดที่เขียน localStorage อาจไม่ทัน) */
+function flushOnHide(){
+  if(!storageMode || !hasPendingSave) return;
+  if(storageMode==='local'){ try{ localStorage.setItem('dtm_data', JSON.stringify(appData)); }catch(e){} }
+  clearTimeout(saveTimer);
+  triggerSave();
+}
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') flushOnHide(); });
+window.addEventListener('pagehide', flushOnHide);
+
 function downloadBlob(blob, filename){
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -3985,16 +4054,28 @@ document.getElementById('hiddenFileInput').addEventListener('change', async (e)=
 
     // เดิม: ถ้า id จากไฟล์ import ชนกับ id ที่มีอยู่แล้ว (id เป็นเลขรัน 1,2,3... ชนกันได้ง่ายมากระหว่าง 2 ไฟล์
     // ที่แยกกันสร้าง) จะเขียนทับกิจกรรมเดิมทันทีโดยไม่เตือน — ถ้าเนื้อหาต่างกันจริง (ไม่ใช่รายการเดียวกัน)
-    // ให้ออก id ใหม่ให้แทน กันข้อมูลเดิมหายอย่างเงียบๆ
+    // ให้ออก id ใหม่ให้แทน กันข้อมูลเดิมหายอย่างเงียบๆ และ dedupe ด้วย uid กันซ้ำตอน import ไฟล์จากเครื่องที่ซิงค์กันอยู่
+    ghEnsureUids(appData);
+    validActivities.forEach(a=>{ if(!a.uid) a.uid = (a.createdAt||'') + '|' + a.startISO + '|' + a.category; });
+    // กัน id ใหม่ที่ออกตอนชนกัน ไปซ้ำกับ id ของรายการในไฟล์ที่ยังไม่ได้ process (ใช้ reduce ไม่ใช้ spread กัน stack ล้นถ้าไฟล์ใหญ่)
+    nextId = validActivities.reduce((m,a)=> a.id>=m ? a.id+1 : m, nextId);
     const byId = new Map(appData.activities.map(a=>[a.id,a]));
+    const byUid = new Map(appData.activities.map(a=>[a.uid,a]));
     const touchedDays = new Set();
     validActivities.forEach(a=>{
-      const existing = byId.get(a.id);
-      let toAdd = a;
-      if(existing && JSON.stringify(existing)!==JSON.stringify(a)){
-        toAdd = Object.assign({}, a, { id: nextId++ });
+      const same = byUid.get(a.uid);
+      if(same){
+        // กิจกรรมเดียวกัน (uid ตรงกัน): ถ้าไฟล์ใหม่กว่าให้ใช้ของไฟล์ แต่คง id เดิมของเครื่องนี้ ไม่งั้นข้าม
+        if(ghTime(a) > ghTime(same)){
+          const merged = Object.assign({}, a, { id: same.id });
+          byId.set(same.id, merged); byUid.set(merged.uid, merged);
+          touchedDays.add(merged.timelineDay);
+        }
+        return;
       }
-      byId.set(toAdd.id, toAdd);
+      let toAdd = a;
+      if(byId.has(a.id)) toAdd = Object.assign({}, a, { id: nextId++ });
+      byId.set(toAdd.id, toAdd); byUid.set(toAdd.uid, toAdd);
       touchedDays.add(toAdd.timelineDay);
     });
     appData.activities = Array.from(byId.values());
