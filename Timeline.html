@@ -2120,7 +2120,7 @@ function renderTodayStreak(){
       return `<span class="streak-chip" title="${tip}"><span class="cat-dot" style="background:${color}"></span>${CATEGORY_LABEL[st.category]||st.category} <b>${cur(st).toLocaleString('th-TH')}</b> ${sk(st).unit==='week' ? 'สัปดาห์' : 'วัน'}</span>`;
     }).join('');
     box.style.display = 'flex';
-  }catch(e){ box.style.display = 'none'; }
+  }catch(e){ console.error('renderTodayStreak failed', e); box.style.display = 'none'; }
 }
 
 const RING_R = 52, RING_C = 2*Math.PI*RING_R;
@@ -3361,7 +3361,7 @@ function computeCategoryStreak(category){
 /* การ์ดสตรีคแยกตามหมวดหมู่กิจกรรม (ไม่อิงสถานะ "จบ Timeline" ของวันอีกต่อไป)
    โชว์เฉพาะ category ที่บันทึกสะสมมาแล้ว >= STREAK_MIN_COUNT ครั้ง เรียงจาก current streak มากไปน้อย
    (ถ้ามีเป้าหมาย ใช้ goalStreak.current เป็นหลักในการเรียง/ไฮไลต์แทน logStreak.current)
-   ถ้าไม่มี category ไหนถึงเกณฑ์เลย ให้ fallback โชว์ 2 อันดับแรกที่ current streak สูงสุด (จากที่มีข้อมูลจริง) แทน */
+   ถ้าไม่มี category ไหนถึงเกณฑ์เลย ให้ fallback โชว์ 2 อันดับแรกที่บันทึกสะสมสูงสุด (จากที่มีข้อมูลจริง) แทน */
 /* ไฟสตรีค — ปรับเกณฑ์/สีที่ตารางนี้ที่เดียว (min = จำนวนวันขั้นต่ำ; f = [ขอบล่าง, ขอบบน/กลาง, แกน]) */
 const FLAME_TIERS = [
   { min:1,   name:'ส้มหม่น',    f:['#B8652A','#D98A4A','#F0BE8A'], glow:0, scale:.8 },
@@ -3408,7 +3408,7 @@ function renderStreak(){
   let fallback = false;
   if(shown.length===0 && stats.length>0){
     fallback = true;
-    shown = [...stats].sort((a,b)=> sortKey(b)-sortKey(a) || longestKey(b)-longestKey(a)).slice(0,2);
+    shown = [...stats].sort((a,b)=> b.totalCount-a.totalCount || sortKey(b)-sortKey(a) || longestKey(b)-longestKey(a)).slice(0,2);
   } else {
     shown.sort((a,b)=> sortKey(b)-sortKey(a) || longestKey(b)-longestKey(a));
   }
@@ -3444,13 +3444,14 @@ function renderStreak(){
   }).join('');
 
   box.innerHTML = `<div class="streak-grid">${cards}</div>` +
-    (fallback ? `<div class="streak-caption">ยังไม่มีหมวดหมู่ไหนบันทึกครบ ${STREAK_MIN_COUNT} ครั้ง — แสดง 2 อันดับที่สตรีคสูงสุดไปก่อน</div>` : '');
+    (fallback ? `<div class="streak-caption">ยังไม่มีหมวดหมู่ไหนบันทึกครบ ${STREAK_MIN_COUNT} ครั้ง — แสดง 2 อันดับที่บันทึกสูงสุดไปก่อน</div>` : '');
 }
 
 /* ---- สรุปรายหมวด: อัตราถึงเป้า 30 วัน / วัน-ช่วงเวลาที่ทำบ่อยสุด / ชั่วโมงสะสม
    คำนวณสดจาก appData.activities ทุกครั้ง ไม่เก็บอะไรเพิ่มลงไฟล์ข้อมูล ---- */
 const HOUR_MILESTONES = [10,50,100,250,500,1000,2500,5000];   // หลักไมล์ชั่วโมงสะสม ปรับที่เดียวจบ
 const OVERVIEW_WINDOW = 30;                                     // ช่วงคิดอัตราถึงเป้า (วัน)
+const OVERVIEW_WEEKS = Math.round(OVERVIEW_WINDOW/7);           // เป้ารายสัปดาห์: นับกี่สัปดาห์ล่าสุด (30 วัน ≈ 4 สัปดาห์)
 const OVERVIEW_MIN_ACTS = 5;                                    // ต้องมีอย่างน้อยกี่ครั้งถึงบอก "ทำบ่อยสุด"
 function dayPartOf(h){
   if(h>=5 && h<11) return 'เช้า';
@@ -3458,31 +3459,60 @@ function dayPartOf(h){
   if(h>=17 && h<21) return 'เย็น';
   return 'ดึก';
 }
-function computeCategoryOverview(cat, firstDay, today){
+function computeCategoryOverview(cat, today){
   const acts = appData.activities.filter(a=>!a.isMilestone && normalizeCategoryKey(a.category)===cat && a.durationMinutes>0);
   const totalMin = acts.reduce((s,a)=>s+a.durationMinutes,0);
 
-  // ก) อัตราถึงเป้า (เฉพาะหมวดที่ตั้งเป้า) — ช่วงสั้นกว่า 30 วันถ้าเพิ่งเริ่มบันทึก
+  // ก) อัตราถึงเป้า (เฉพาะหมวดที่ตั้งเป้า)
+  //    - เริ่มนับจากวันแรกที่บันทึก "หมวดนี้" (ไม่ใช่วันแรกของทั้งแอป) ช่วงสั้นกว่า 30 วันถ้าเพิ่งเริ่มทำหมวดนี้
+  //    - วันนี้ที่ยังไม่ถึงเป้า (ยังไม่จบวัน) ไม่นับเป็นวันที่พลาด ให้ช่วงจบที่เมื่อวานแทน (เหมือนที่ streak ทำ)
+  //    - จับคู่หมวดด้วย normalizeCategoryKey เหมือนยอดรวม/กราฟ เพื่อให้ตัวเลขตรงกันทุกที่
+  //    - เป้าแบบ N วัน/สัปดาห์ (N<7) นับเป็น "สัปดาห์ที่ผ่าน" (มีวันถึงเป้า >= N วัน, สัปดาห์เริ่มวันจันทร์) ตรงกับ weeklyStreak
   let hit = null;
   const goal = appData.goals[cat];
-  if(goal && firstDay){
-    const span = Math.round((new Date(today+'T00:00:00') - new Date(firstDay+'T00:00:00'))/86400000)+1;
-    const win = Math.max(1, Math.min(OVERVIEW_WINDOW, span));
+  if(goal){
     const sums = {};
+    let catFirst = null;
     appData.activities.forEach(a=>{
-      if(a.category!==cat || a.isMilestone) return;
+      if(a.isMilestone || normalizeCategoryKey(a.category)!==cat) return;
+      if(a.timelineDay && (!catFirst || a.timelineDay<catFirst)) catFirst = a.timelineDay;
       sums[a.timelineDay] = (sums[a.timelineDay]||0) + (goal.unit==='pages' ? (a.pages||0) : (a.durationMinutes||0));
     });
-    let days = 0;
-    for(let i=0;i<win;i++){ if((sums[addDaysToDateStr(today,-i)]||0) >= goal.target) days++; }
-    const dpw = goal.daysPerWeek>=1 && goal.daysPerWeek<7 ? goal.daysPerWeek : 7;
-    if(dpw<7){
-      const exp = Math.max(1, Math.round(win*dpw/7));
-      hit = { pct: Math.min(100, Math.round(days/exp*100)), sub: `${days} วัน จาก ~${exp} วันที่ตั้งไว้` };
-    } else {
-      hit = { pct: Math.round(days/win*100), sub: `${days}/${win} วัน` };
+    if(catFirst){
+      const end = (sums[today]||0) >= goal.target ? today : addDaysToDateStr(today,-1);
+      const span = Math.round((new Date(end+'T00:00:00') - new Date(catFirst+'T00:00:00'))/86400000)+1;
+      if(span < 1){
+        hit = { pct:null, note:'วันนี้ยังไม่ครบเป้า · ยังไม่มีวันที่จบให้คิด' };   // เพิ่งเริ่มวันนี้และยังไม่ถึงเป้า
+      } else {
+        const dpw = goal.daysPerWeek>=1 && goal.daysPerWeek<7 ? goal.daysPerWeek : 7;
+        if(dpw<7){
+          // รายสัปดาห์: ผ่าน = มีวันถึงเป้า >= dpw วันในสัปดาห์นั้น (ตรงกับ weeklyStreak)
+          //  - สัปดาห์ปัจจุบัน: นับเฉพาะถ้าผ่านแล้ว (ยังไม่จบสัปดาห์ ไม่ถือว่าพลาด)
+          //  - สัปดาห์แรกของหมวดที่เริ่มกลางสัปดาห์และยังไม่ผ่าน: ข้าม ไม่ตัดสินว่าพลาด
+          const hits = {};
+          Object.keys(sums).forEach(d=>{ if(sums[d] >= goal.target){ const w = weekStartOf(d); hits[w] = (hits[w]||0)+1; } });
+          const curWeek = weekStartOf(today), firstWeek = weekStartOf(catFirst);
+          const results = [];
+          if((hits[curWeek]||0) >= dpw) results.push(true);
+          for(let w=addDaysToDateStr(curWeek,-7); results.length<OVERVIEW_WEEKS && w>=firstWeek; w=addDaysToDateStr(w,-7)){
+            const ok = (hits[w]||0) >= dpw;
+            if(w===firstWeek && catFirst!==firstWeek && !ok) continue;
+            results.push(ok);
+          }
+          if(!results.length){
+            hit = { pct:null, note:'ยังไม่มีสัปดาห์ที่จบให้คิด' };
+          } else {
+            const passed = results.filter(Boolean).length;
+            hit = { pct: Math.round(passed/results.length*100), sub: `${passed}/${results.length} สัปดาห์ (ครบ ${dpw} วัน/สัปดาห์)` };
+          }
+        } else {
+          const win = Math.min(OVERVIEW_WINDOW, span);
+          let days = 0;
+          for(let i=0;i<win;i++){ if((sums[addDaysToDateStr(end,-i)]||0) >= goal.target) days++; }
+          hit = { pct: Math.round(days/win*100), sub: `${days}/${win} วัน` };
+        }
+      }
     }
-    hit.win = win;
   }
 
   // ข) วันในสัปดาห์ / ช่วงเวลาของวัน ที่ใช้เวลาสะสมมากสุด
@@ -3512,15 +3542,16 @@ function renderOverview(){
   if(!box) return;
   try{
     const today = effectiveTodayStr();
-    const firstDay = appData.activities.reduce((m,a)=> (a.timelineDay && (!m || a.timelineDay<m)) ? a.timelineDay : m, null);
-    const rows = CATEGORY_ORDER.map(c=>computeCategoryOverview(c, firstDay, today)).filter(o=>o.totalMin>0)
+    const rows = CATEGORY_ORDER.map(c=>computeCategoryOverview(c, today)).filter(o=>o.totalMin>0)
       .sort((a,b)=>b.totalMin-a.totalMin);
     if(!rows.length){ box.innerHTML = `<span class="empty-inline">ยังไม่มีข้อมูลเวลามากพอที่จะสรุป</span>`; return; }
     box.innerHTML = `<div class="ov-list">` + rows.map(o=>{
       const color = CATEGORY_COLORS[o.cat] || '#8B939C';
-      const hitCell = o.hit
-        ? `<div class="ov-val">${o.hit.pct}%</div><div class="ov-lbl">ถึงเป้า ${o.hit.sub}</div>`
-        : `<div class="ov-val ov-none">—</div><div class="ov-lbl">ยังไม่ตั้งเป้า</div>`;
+      const hitCell = !o.hit
+        ? `<div class="ov-val ov-none">—</div><div class="ov-lbl">ยังไม่ตั้งเป้า</div>`
+        : (o.hit.pct===null
+          ? `<div class="ov-val ov-none">—</div><div class="ov-lbl">${o.hit.note||'ยังไม่มีข้อมูลให้คิด'}</div>`
+          : `<div class="ov-val">${o.hit.pct}%</div><div class="ov-lbl">ถึงเป้า ${o.hit.sub}</div>`);
       const bestCell = o.best
         ? `<div class="ov-val">${o.best.weekday}${o.best.part ? ' · '+o.best.part : ''}</div><div class="ov-lbl">ทำบ่อยสุด</div>`
         : `<div class="ov-val ov-none">—</div><div class="ov-lbl">ข้อมูลยังน้อย</div>`;
@@ -3531,7 +3562,7 @@ function renderOverview(){
         <div class="ov-cell">${hitCell}</div><div class="ov-cell">${bestCell}</div><div class="ov-cell">${totalCell}</div>
       </div>`;
     }).join('') + `</div>`;
-  }catch(e){ box.innerHTML = ''; }
+  }catch(e){ console.error('renderOverview failed', e); box.innerHTML = ''; }
 }
 
 /* ป้ายกำกับช่วงเวลาที่เลือกได้สำหรับกราฟ trend */

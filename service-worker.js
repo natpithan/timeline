@@ -1,7 +1,7 @@
 /* Daily Timeline Manager — service worker
    แคช app shell ให้เปิดออฟไลน์ได้ ข้อมูลกิจกรรมอยู่ใน localStorage/ไฟล์ในเครื่อง ไม่เกี่ยวกับ SW นี้เลย
    เวลาแก้ index.html แล้วอัปโหลดใหม่: เปลี่ยนเลข CACHE_VERSION ด้านล่างให้ SW รู้ว่ามีของใหม่ */
-const CACHE_VERSION = 'v13';
+const CACHE_VERSION = 'v14';
 const CACHE_NAME = 'dtm-shell-' + CACHE_VERSION;
 const FONT_CACHE = 'dtm-fonts-v1';
 const SHELL = [
